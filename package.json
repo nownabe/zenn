@@ -1,0 +1,19 @@
+{
+  "private": true,
+  "name": "zenn",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/nownabe/zenn.git"
+  },
+  "author": "nownabe",
+  "bugs": {
+    "url": "https://github.com/nownabe/zenn/issues"
+  },
+  "homepage": "https://github.com/nownabe/zenn#readme",
+  "dependencies": {
+    "zenn-cli": "^0.1.100"
+  }
+}
