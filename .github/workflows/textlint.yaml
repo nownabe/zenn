@@ -1,0 +1,12 @@
+name: textlint
+on:
+  pull_request:
+
+jobs:
+  textlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: tsuyoshicho/action-textlint@v3
+        with:
+          reporter: github-pr-check
