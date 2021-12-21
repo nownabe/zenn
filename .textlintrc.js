@@ -25,7 +25,9 @@ module.exports = {
       },
 
       "no-exclamation-question-mark": false,
-      "sentence-length": 120,
+      "sentence-length": {
+        max: 120,
+      },
     },
   }
 };
