@@ -85,9 +85,9 @@ Rails のメインである Web アプリ (`bin/rails server`) を動かすプ�
 * モニタリング
 * リビジョン管理
 
-なんかができます。機能が充実していて、コストが安く、シンプルで使いやすく、DX が気持ちいいので、私がコンテナでアプリケーションを公開するときには真っ先に検討するプラットフォームです。Google Cloud 版 Heroku、コンテナ版 App Engine Standard Environment と考えるとわかりやすいです。
+なんかができます。機能が充実していてコストが安く、シンプルで使いやいため、私がコンテナでアプリケーションを公開するときには真っ先に検討するプラットフォームです。Google Cloud 版 Heroku、コンテナ版 App Engine Standard Environment と考えればわかりやすいです。
 
-Google Cloud で Rails のコンテナを動かそうとすると、Cloud Run、Google Compute Engine (GCE)、Google Kubernetes Engine (GKE)、App Engine Flexible Environment (FE) などの選択肢があります。この中で Cloud Run が唯一サーバーレスでコンテナを運用できます。
+Google Cloud で Rails のコンテナを動かそうとすると、Cloud Run、Google Compute Engine (GCE)、Google Kubernetes Engine (GKE)、App Engine Flexible Environment (FE) などの選択肢があります。この中で Cloud Run が唯一サーバーレスにコンテナを運用できます。
 
 [^2]: 最近はソースコードから勝手にイメージをビルドしてくれるようになりました。[ソースコードからのデプロイ  |  Cloud Run のドキュメント  |  Google Cloud](https://cloud.google.com/run/docs/deploying-source-code)
 
@@ -104,7 +104,7 @@ App Engine FE もコンテナの PaaS であり似たような環境ではあり
 
 AWS の RDS や GCP の Cloud SQL などの RDB サービスを使うとき、サイジング、フェイルオーバー、レプリケーション、リードレプリカなどの設計が必要になります。また、アップグレードやメンテナンス時はダウンタイムが発生するため、それを考慮したアプリケーションの設計・運用が必要です。Spanner はメンテナンスによるダウンタイムもなく、開発者はノード数とリージョンを設定するだけです。ノード数に関しても性能が足りなくなればダウンタイムなしで追加できます。そのため従来の RDB サービスに比べてインフラとしての構築・運用コストは遥かに少なく済みます。
 
-ただし、注意点が 2 点あります。インフラコストと従来の RDB との差異です。なぜ開発者が冗長化を考えなくていいかというと、サービス側で標準機能として冗長化されているからです。その分一般的な RDB サービスより料金が高くなるケースが多いです[^5]。また、従来の MySQL や PostgreSQL との差異をアプリケーションレイヤーで考慮する必要があります。例えば、Cloud Spanner では連番の ID はアンチパターンとされているため、Primary Key でソートするような使い方は避けるべきです。Active Record の Spanner アダプターも Primary Key にはデフォルトで UUID を利用するようになっています。とはいえ、ある程度 Active Record がいい感じに抽象化してくれるし、スケーラビリティを意識したアプリケーションにおいては特別なことではないし、Spanner の特性を理解すればそこまで難しい話ではないでしょう。
+ただし、注意点が 2 点あります。インフラコストと従来の RDB との差異です。なぜ開発者が冗長化を考えなくていいかというと、サービス側で標準機能として冗長化されているからです。そのため特に小規模な利用だと一般的な RDB サービスより高い料金となるケースが多いです[^5]。また、従来の MySQL や PostgreSQL との差異をアプリケーションレイヤーで考慮する必要があります。例えば、Cloud Spanner では連番の ID はアンチパターンとされているため、Primary Key でソートするような使い方は避けるべきです。Active Record の Spanner アダプターも Primary Key にはデフォルトで UUID を利用するようになっています。とはいえ、ある程度 Active Record がいい感じに抽象化してくれるし、スケーラビリティを意識したアプリケーションにおいては特別なことではないし、Spanner の特性を理解すればそこまで難しい話ではないでしょう。
 
 
 [^4]: 選択したというかこれを使ってみたくてこの記事書き始めたんですが。
@@ -114,16 +114,16 @@ AWS の RDS や GCP の Cloud SQL などの RDB サービスを使うとき、�
 
 非同期ジョブのメッセージングキューとして [Cloud Pub/Sub](https://cloud.google.com/pubsub) を選択しました。Cloud Pub/Sub はサーバーレスなメッセージングキューサービスです。
 
-ここでは Redis をメッセージングキューとして使うことと比較して考えます。クラウドのマネージド Redis サービスを使う場合であってもRDB サービスと同じような設計・運用コストが発生します。Pub/Sub であればこのようなインフラに関する面倒事は考えなくて済みます。
+ここでは Redis をメッセージングキューとして使うことと比較して考えます。クラウドのマネージド Redis サービスを使う場合であっても RDB サービスと同じような設計・運用コストが発生します。Pub/Sub であればこのようなインフラに関する面倒事は考えなくて済みます。
 
-ただ、次の 2 つの理由から現実的には[Memorystore for Redis](https://cloud.google.com/memorystore/docs/redis/redis-overview)を選択することになりそうです。1 つ目は、Pub/Sub に対応した実用的な非同期ジョブワーカーがないことです。Sidekiq 使いたいですよね。2 つ目は、結局キャッシュも必要になるからです。Pub/Sub はキャッシュにはなり得ません。Sidekiq などの Redis ベースのワーカーを使いたい場合やキャッシュとメッセージングキューを同居させて楽したいという場合は、Redis のマネージドサービスがリーズナブルな選択肢になるのではないでしょうか。また、課金体系の違いから Redis の方が安くなるケースも考えられます。マネージド Redis のインフラ運用コストや同居が許容できない場合はPub/Sub + [Memorystore for Memcached](https://cloud.google.com/memorystore/docs/memcached)が良い選択肢になります。
+ただ、次の 2 つの理由から現実的には[Memorystore for Redis](https://cloud.google.com/memorystore/docs/redis/redis-overview)を選択することになりそうです。1 つ目は、Pub/Sub に対応した実用的な非同期ジョブワーカーがないことです。Sidekiq 使いたいですよね。2 つ目は、結局キャッシュも必要になるからです。Pub/Sub はキャッシュにはなり得ません。Sidekiq などの Redis ベースのワーカーを使いたい場合やキャッシュとメッセージングキューを同居させて楽したいという場合は、Redis のマネージドサービスがリーズナブルな選択肢になるのではないでしょうか。また、課金体系の違いから Redis の方が安くなるケースも考えられます。マネージド Redis のインフラ運用コストや同居が許容できない場合は Pub/Sub + [Memorystore for Memcached](https://cloud.google.com/memorystore/docs/memcached)が良い選択肢になります。
 
 
 ## Googke Kubernetes Engine Autopilot
 
 多くの方が本記事の Kubernetes という単語を見てがっかりしたんじゃないでしょうか。よくわかります。私もできることなら Kubernetes は使いたくありません。
 
-といいつつ、DB マイグレーション、非同期ジョブワーカー、Rails コンソールの実行プラットフォームとして [Google Kubernetes Engine Autopilot mode](https://cloud.google.com/kubernetes-engine/docs/concepts/autopilot-overview) を選択しました。GKE Autopilot はほぼサーバーレスとして Kubernetes の機能を提供するサービスです。もう少しだけ正確に説明すると、GKE のベストプラクティスが適用されたフルマネージドなノードが提供されるマネージド Kubernetes サービスです。GKE Standard に比べると設定項目が少ないため簡単にクラスタを作成できます。
+といいつつ、DB マイグレーション、非同期ジョブワーカー、Rails コンソールの実行プラットフォームとして [Google Kubernetes Engine Autopilot mode](https://cloud.google.com/kubernetes-engine/docs/concepts/autopilot-overview) を選択しました。GKE Autopilot はほぼサーバーレスとして Kubernetes の機能を提供するサービスです。もう少しだけ正確に説明すると、GKE のベストプラクティスを適用したフルマネージドなノードを提供するマネージド Kubernetes サービスです。GKE Standard に比べると設定項目が少ないため簡単にクラスタを作成できます。
 
 すべての用途を Cloud Run でカバーできるとベストだったんですが現在はできません。例えば、Cloud Run ではインスタンスの常時起動ができず[^6]、Pub/Sub の Pull サブスクリプションを利用できません[^7]。また、HTTP などのエンドポイントが必要になります。db:migrate や非同期ジョブに関してもエンドポイントを用意してそれをトリガーに実行するような実装もできますが、Rails way からは逸脱するため避けた方がいいでしょう。将来的にはこれらのユースケースでも Cloud Run が利用できるようになることを期待しています。
 
@@ -451,7 +451,7 @@ end
 bin/rails pubsub:topic:create[default]
 ```
 
-ActiveJob の QueueAdapter を作成します。この Adapter により非同期 Job がシリアライズされて Pub/Sub にキューイングされるようになります。
+ActiveJob の QueueAdapter を作成します。この Adapter で非同期 Job がシリアライズされて Pub/Sub にキューイングされます。
 
 ```ruby:lib/active_job/queue_adapters/pubsub_adapter.rb
 require "json"
@@ -526,7 +526,7 @@ class PostNotificationJob < ApplicationJob
 end
 ```
 
-Post が作成されたときにキューイングするようにします。
+Post が作成されたときキューイングするようにします。
 
 ```ruby:app/controllers/posts_controller.rb
   # POST /posts or /posts.json
@@ -958,7 +958,7 @@ tmp/*
 vendor/*
 ```
 
-これで、git push するとイメージがビルドされて Artifact Registry のリポジトリにプッシュされるようになります。初回はそれなりに時間がかかるので 1 回 push しておいてください。
+これで、git push するとイメージがビルドされて Artifact Registry のリポジトリへプッシュされるようになります。初回はそれなりに時間がかかるので 1 回 push しておいてください。
 
 
 ## db:migrate Job
@@ -973,7 +973,7 @@ vendor/*
 
 Kubernetes ではリソースを YAML として定義します。db:migrate を Job として実行するために、次の YAML を作成します。
 
-* `k8s/dbjob/service-account.yaml.tpl` - Kubernetes の世界の[Service Account](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/)です。GKE の[Workload Identity](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity)という機能を使って Kubernetes 世界の Service Account と Google Cloud 世界の Service Account を紐付けることで、Kubernetes の Pod に Google Cloud の権限を付与できます。
+* `k8s/dbjob/service-account.yaml.tpl` - Kubernetes の世界の [Service Account](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/) です。GKE の [Workload Identity](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity) という機能を使って Kubernetes 世界の Service Account と Google Cloud 世界の Service Account を紐付けることで、Kubernetes の Pod に Google Cloud の権限を付与できます。
 * `k8s/dbjob/job-db-migrate.yaml.tpl` - db:migrate を実行する Job です。
 
 拡張子が `.tpl` となっているのには理由があって、これらのファイルが YAML を生成するテンプレートだからです。例えばデプロイする度にコンテナイメージは新しくなるので、YAML の中で最新のコンテナイメージを指定する必要があります。これを解決するために Git リポジトリには YAML のテンプレートをコミットして、Cloud Build でデプロイするときに `deploy.sh` で YAML をレンダリングします。
@@ -1117,7 +1117,7 @@ New Post で Spanner に Post レコードが作成されることも確認で�
 
 それでは最後にワーカーをデプロイします。ワーカーは Kubernetes の Deployment として GKE Autopilot にデプロイします。
 
-[Deployment](https://kubernetes.io/ja/docs/concepts/workloads/controllers/deployment/)は Kubernetes の主役と言ってもいい機能で、Web アプリやバックグラウンドプロセスを管理するためによく使われます。コンテナの障害時自動復旧、新しいコンテナイメージへのローリングアップデート、ロールバック、スケーリングなど、アプリケーションの運用に必要な様々な機能を備えています[^13]。
+[Deployment](https://kubernetes.io/ja/docs/concepts/workloads/controllers/deployment/) は Kubernetes の主役と言ってもいい機能で、Web アプリやバックグラウンドプロセスを管理するためによく使われます。コンテナの自動障害復旧、新しいコンテナイメージへのローリングアップデート、ロールバック、スケーリングなど、アプリケーションの運用に必要な様々な機能を備えています[^13]。
 
 ワーカーも db:migrate Job と同じように Service Account と Deployment の YAML をそれぞれ作成します。
 
@@ -1193,9 +1193,9 @@ kubectl apply -f k8s/worker/deployment-worker-default.yaml
 
 ここで終わりとしたいところですが、最後に Rails コンソールを実行する仕組みを作ります。
 
-コンテナを使うのであればすべてイミュータブルに宣言的なアレでやっていくべきだという声もあるかとは思います。しかし、Rails を使う多くのチームが Rails コンソールを前提とした運用方法に慣れているであろうことは簡単に想像できます。また、今から新しく Rails を採用してかつインフラの面倒をみなくていいように開発しようというスピード感には Rails コンソールがあった方が目的を達しやすいということも考えられます。というわけで、サーバーレスに Rails コンソールを利用する方法を紹介します。
+コンテナを使うのであればすべてイミュータブルに宣言的なアレでやっていくべきだという声もあります。しかし、Rails を使う多くのチームが Rails コンソールを前提とした運用方法に慣れているであろうことは簡単に想像できます。また、今から新しく Rails を採用してかつインフラの面倒をみなくていいように開発しようというスピード感には Rails コンソールがあると目的を達しやすいということも考えられます。というわけで、本記事ではサーバーレスに Rails コンソールを利用する方法を紹介します。
 
-今回は、Rails コンソールを利用したいときに GKE Autopilot に Rails コンソール用の Pod を立ち上げて、そこに kubectl exec で接続するという方法を採用しました。
+今回は、Rails コンソールを利用したいときに GKE Autopilot で Rails コンソール用の Pod を立ち上げて、そこに kubectl exec で接続するという方法を採用しました。
 
 Job や Deployment と同じように Pod の YAML を作成します。
 
@@ -1315,7 +1315,7 @@ irb(main):002:0>
 
 ## ログやモニタリング
 
-今回紹介した構成であればすべてのログは[Cloud Logging](https://cloud.google.com/logging)に保存されます。また、Google Cloud のコンソールから、Cloud Build、Cloud Run、GKE、それぞれの UI でログを確認することもできます。
+今回紹介した構成であればすべてのログは[Cloud Logging](https://cloud.google.com/logging)に保存されます。また、Google Cloud のコンソールから、Cloud Build、Cloud Run、GKE、それぞれの UI でログを確認できます。
 
 モニタリングに関しても、主要なメトリクスは[Cloud Monitoring](https://cloud.google.com/monitoring)に保存されます。
 
@@ -1323,4 +1323,4 @@ Cloud Monitoring ではこれらのログやメトリクスを利用してアラ
 
 # おわりに
 
-ActiveRecord で Spanner 試してみるかーと軽い気持ちで書き始めた記事がいつの間にか非常に長くなってしまいました。ぜひ、Rails で Google Cloud の楽しさを体験してみてください。ここまでお付き合いいただきありがとうございました！　🐶💖
+ActiveRecord の Spanner アダプタ試してみるかーと軽い気持ちで書き始めた記事がいつの間にか非常に長くなってしまいました。ぜひ、Rails で Google Cloud の楽しさを体験してみてください。ここまでお付き合いいただきありがとうございました！　🐶💖
