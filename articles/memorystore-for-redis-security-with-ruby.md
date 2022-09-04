@@ -3,7 +3,7 @@ title: "セキュリティが有効な Memorystore for Redis に Ruby から接�
 emoji: "🔒"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: [Ruby, GCP, Memorystore, Redis]
-published: false
+published: true
 ---
 
 # はじめに
