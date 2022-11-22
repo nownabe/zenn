@@ -14,7 +14,7 @@ Memorystore for Redis のセキュリティ オプションは 3 種類ありま
 
 * [Redis AUTH](https://cloud.google.com/memorystore/docs/redis/auth-overview?hl=ja)
 * [転送中の暗号化](https://cloud.google.com/memorystore/docs/redis/in-transit-encryption?hl=ja)
-* [お客管理の暗号鍵 (CMEK)](https://cloud.google.com/memorystore/docs/redis/cmek?hl=ja)
+* [顧客管理の暗号鍵 (CMEK)](https://cloud.google.com/memorystore/docs/redis/cmek?hl=ja)
 
 このうちクライアントからの接続に関係する **Redis AUTH** と**転送中の暗号化**について簡単に紹介し、それぞれが有効なときに Ruby から接続する方法を紹介します。
 
