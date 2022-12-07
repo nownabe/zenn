@@ -115,7 +115,7 @@ Cloud Spanner といえば高いというイメージがありますよね。し
 
 本記事で動作確認を行ったコードはこちらにあります。
 
-https://github.com/nownabe/example-google-cloud-ruby/tree/main/spanner-on-rails
+https://github.com/nownabe/example-google-cloud-ruby/tree/main/rails-on-spanner
 
 ## Cloud Spanner インスタンス作成
 
