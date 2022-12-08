@@ -941,7 +941,7 @@ ActiveRecord::ConnectionAdapters::Spanner::DatabaseStatements.pretend(FixturesPa
 
 インターリーブを使ったモデルの Fixture は少し複雑になるので [FactoryBot](https://github.com/thoughtbot/factory_bot) などを使った方がいいかもしれません。
 
-## インターリブの小テーブルの保存に失敗する
+## インターリーブの小テーブルの保存に失敗する
 
 上述したバグです。Rails 7.0.x では `ApplicationRecord._set_composite_primary_key_values` をオーバーライドすることで対応できます。
 
