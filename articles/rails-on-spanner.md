@@ -268,6 +268,26 @@ Loading development environment (Rails 7.0.4)
 
 MySQL や PostgreSQL を使った開発では `mysql` コマンドや `psql` コマンドを使って直接 SQL クエリを実行することがよくあります。Cloud Spanner では Web UI からクエリを実行して結果を得ることもできますが [spanner-cli](https://github.com/cloudspannerecosystem/spanner-cli) を使うと簡単にローカルから接続できます。
 
+インストールには [Go](https://go.dev/) が必要なのでまずは [Go をインストール](https://go.dev/doc/install)してください。[Homebrew を使ってインストール](https://formulae.brew.sh/formula/go)できます。
+
+```sh
+brew install go
+```
+
+spanner-cli を使うためには `$GOPATH/bin` にパスを通す必要があります。
+
+```sh
+echo 'export PATH="$GOPATH/bin:$PATH"' >> ~/.bash_profile
+```
+
+`go install` で spanner-cli をインストールします。
+
+```sh
+go install github.com/cloudspannerecosystem/spanner-cli@latest
+```
+
+インストールできたら次のようにプロジェクト、インスタンス、データベースを指定して接続します。
+
 ```sh
 $ spanner-cli -p $SPANNER_PROJECT_ID -i $SPANNER_INSTANCE_ID -d $SPANNER_DATABASE_ID
 
