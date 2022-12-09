@@ -70,7 +70,7 @@ Cloud Spanner を使えばもう複雑な画面を前に悩む必要はありま
 
 特殊なデータベースだから特殊な開発スキルが必要かというと、そんなことはありません。Cloud Spanner も MySQL や PostgreSQL と同じような RDBMS として利用できます。細かい使い勝手が違うことはありますが他の RDBMS 同士の差分と比べて学習量が特段大きいわけではありません。
 
-将来的に安心できるスキーマを設計するためには Cloud Spanner のベストプラクティスに従う必要がありますが、整備されたドキュメントを一通り読めば問題ないでしょう。他の RDBMS で正しく設計・開発ができる開発者であれば、慣れていない RDBMS を使う程度の苦労で Cloud Spanner を使うことができます。
+将来的に安心できるスキーマを設計するためには Cloud Spanner の[ベストプラクティス](https://cloud.google.com/spanner/docs/best-practice-list)に従う必要がありますが、整備されたドキュメントを一通り読めば問題ないでしょう。他の RDBMS で正しく設計・開発ができる開発者であれば、慣れていない RDBMS を使う程度の苦労で Cloud Spanner を使うことができます。
 
 ## でも、お高いんじゃない？
 
@@ -95,9 +95,10 @@ Cloud Spanner といえば高いというイメージがありますよね。Clo
 
 ここまで、そんなに高くもなくメリットいっぱいあるよという説明をしましたが注意点もあります。
 
-1 つ目は、Cloud Spanner 性能を最大限発揮するためには Cloud Spanner の知識が必要になるということです。Cloud Spanner はサービスの成長に追従できると説明しましたが、そのためにはこのポイントを抑えておく必要があります。例えば、Cloud Spanner では主キーに連番を使うと自動シャーディングで上手くスケールしないケースがあります。従来の RDBMS ではスケールアップで対応できる可能性がありますが、Cloud Spanner の場合は自動シャーディングによるスケールアウトで対応しなければいけません。[^3]
+1 つ目は、Cloud Spanner 性能を最大限発揮するためには Cloud Spanner の知識が必要になるということです。Cloud Spanner はサービスの成長に追従できると説明しましたが、そのためにはこのポイントを抑えておく必要があります。例えば、Cloud Spanner では主キーに連番を使うと自動シャーディングで上手くスケールしないケースがあります[^3]。従来の RDBMS ではスケールアップで対応できる可能性がありますが、Cloud Spanner の場合は自動シャーディングによるスケールアウトで対応しなければいけません。[^4]
 
-[^3]: ドキュメントは日本語でもしっかり整備されているので一読すれば安心できるでしょう。 [スキーマ設計  |  Cloud Spanner  |  Google Cloud](https://cloud.google.com/spanner/docs/schema-design)
+[^3]: [スキーマについて  |  Cloud Spanner  |  Google Cloud](https://cloud.google.com/spanner/docs/schema-and-data-model#choosing_a_primary_key)
+[^4]: ドキュメントは日本語でもしっかり整備されているので一読すれば安心できるでしょう。 [スキーマ設計  |  Cloud Spanner  |  Google Cloud](https://cloud.google.com/spanner/docs/schema-design)
 
 2 つ目は、開発用インスタンスの必要性です。Cloud Spanner は OSS ではないためローカルマシンで動作しません。[エミュレータ](https://cloud.google.com/spanner/docs/emulator?hl=ja)はありますがデータの永続化できず本番環境との差分もいくつかあります。そのためテストには十分ですが開発用途としては不十分であり、本番用とは別に開発用のインスタンスも必要になるケースが多いです。最低料金のインスタンスでも 10 個のデータベースを作成できるので、開発用にインスタンスを 1 つ作成するような形がいいでしょう。場合によっては[無料のトライアル インスタンス](https://cloud.google.com/blog/ja/products/spanner/spanner-sample-apps-and-free-trial-instance)を使った開発も可能です。
 
@@ -121,7 +122,7 @@ https://github.com/nownabe/example-google-cloud-ruby/tree/main/rails-on-spanner
 
 ## Cloud Spanner インスタンス作成
 
-`rails new` する前に Cloud Spanner インスタンスを作成しておきます。[Web UI](https://console.cloud.google.com/) でも `gcloud` コマンドでも作成できます。ここでは `gcloud` コマンドで作成する方法を紹介します[^4]。
+`rails new` する前に Cloud Spanner インスタンスを作成しておきます。[Web UI](https://console.cloud.google.com/) でも `gcloud` コマンドでも作成できます。ここでは `gcloud` コマンドで作成する方法を紹介します[^5]。
 
 ```sh
 gcloud spanner instances create rails-on-spanner \
@@ -132,7 +133,7 @@ gcloud spanner instances create rails-on-spanner \
 
 このコマンドで最小のインスタンスが東京リージョンに作成されます。
 
-[^4]: 事前に gcloud のインストールと初期化が必要です。[クイックスタート: Google Cloud CLI をインストールする  |  Google Cloud CLI のドキュメント](https://cloud.google.com/sdk/docs/install-sdk?hl=ja)
+[^5]: 事前に gcloud のインストールと初期化が必要です。[クイックスタート: Google Cloud CLI をインストールする  |  Google Cloud CLI のドキュメント](https://cloud.google.com/sdk/docs/install-sdk?hl=ja)
 
 ## Application Default Credentials の設定
 
@@ -259,9 +260,9 @@ Loading development environment (Rails 7.0.4)
   updated_at: Fri, 02 Dec 2022 06:38:31.642071966 UTC +00:00>]
 ```
 
-ここで気になる点として `id` がランダムな数値になっています。Cloud Spanner Adapter はデフォルトで主キーに INT64 型の UUID を利用します[^5]。これは Cloud Spanner の性能を引き出すための[ベストプラクティス](https://cloud.google.com/spanner/docs/schema-design?hl=ja#uuid_primary_key)のひとつです。
+ここで気になる点として `id` がランダムな数値になっています。Cloud Spanner Adapter はデフォルトで主キーに INT64 型の UUID を利用します[^6]。これは Cloud Spanner の性能を引き出すための[ベストプラクティス](https://cloud.google.com/spanner/docs/schema-design?hl=ja#uuid_primary_key)のひとつです。
 
-[^5]: UUID はよく見る文字列ではなく INT64 型になっています。ActiveRecord Cloud Spanner Adapter では元の UUID の先頭 4 bit は常に一定となるため捨てていて、厳密な UUID ではありません。
+[^6]: UUID はよく見る文字列ではなく INT64 型になっています。ActiveRecord Cloud Spanner Adapter では元の UUID の先頭 4 bit は常に一定となるため捨てていて、厳密な UUID ではありません。
 
 
 ## spanner-cli によるクエリ実行
@@ -396,9 +397,9 @@ comment1.post
 
 ## インターリーブの利用
 
-Cloud Spanner には[インターリーブ](https://cloud.google.com/spanner/docs/schema-and-data-model?hl=ja)という外部キーに似た機能があります。どちらも親子関係を表現できる機能ですが[^6]、インターリーブでは分散されたノードにおいて親と子が物理的に同じ場所に配置されるため多くの親子関係で外部キーよりパフォーマンスが向上します。
+Cloud Spanner には[インターリーブ](https://cloud.google.com/spanner/docs/schema-and-data-model?hl=ja)という外部キーに似た機能があります。どちらも親子関係を表現できる機能ですが[^7]、インターリーブでは分散されたノードにおいて親と子が物理的に同じ場所に配置されるため多くの親子関係で外部キーよりパフォーマンスが向上します。
 
-[^6]: インターリーブと外部キーの違いについては[こちら](https://cloud.google.com/spanner/docs/foreign-keys/overview?hl=ja#fk-and-table-interleaving)にまとまっています。
+[^7]: インターリーブと外部キーの違いについては[こちら](https://cloud.google.com/spanner/docs/foreign-keys/overview?hl=ja#fk-and-table-interleaving)にまとまっています。
 
 インターリーブすると子テーブルは複合主キーとなるので、ActiveRecord でインターリーブする場合は複合主キーを扱うために [composite_primary_keys](https://github.com/composite-primary-keys/composite_primary_keys) という gem が必要になります。
 
@@ -782,7 +783,7 @@ end
 
 ## upsert とミューテーション
 
-Cloud Spanner は upsert 用の構文[^7]をサポートしていません。Cloud Spanner で upsert を実現するためには SQL ではなく[ミューテーション](https://cloud.google.com/spanner/docs/modify-mutation-api?hl=ja) という方法を使う必要があります[^8]。そのため ActiveRecord Cloud Spanner Adapter では `upsert`/`upsert_all` メソッドをミューテーションで実装しています。
+Cloud Spanner は upsert 用の構文[^8]をサポートしていません。Cloud Spanner で upsert を実現するためには SQL ではなく[ミューテーション](https://cloud.google.com/spanner/docs/modify-mutation-api?hl=ja) という方法を使う必要があります[^9]。そのため ActiveRecord Cloud Spanner Adapter では `upsert`/`upsert_all` メソッドをミューテーションで実装しています。
 
 注意点として、Cloud Spanner はひとつのトランザクション内で SQL とミューテーションによるデータ更新を同時に扱うことができず、SQL を発行するようなトランザクション内で `upsert`/`upsert_all` メソッドを実行するとエラーになります。トランザクション内で upsert するためにはミューテーションを使うための特別なトランザクションを利用します。このトランザクションの中では SQL のかわりにミューテーションを発行します。
 
@@ -815,8 +816,8 @@ end
 現行バージョン (Rails 7.0.4、Cloud Spanner Adapter 1.2.2) では不具合のためミューテーションのトランザクション内でも upsert がエラーになります。
 :::
 
-[^7]: `ON DUPLICATE` や `ON CONFLICT`
-[^8]: [DML とミューテーションの比較  |  Cloud Spanner  |  Google Cloud](https://cloud.google.com/spanner/docs/dml-versus-mutations?hl=ja)
+[^8]: `ON DUPLICATE` や `ON CONFLICT`
+[^9]: [DML とミューテーションの比較  |  Cloud Spanner  |  Google Cloud](https://cloud.google.com/spanner/docs/dml-versus-mutations?hl=ja)
 
 ## テーブルコメントがない
 
