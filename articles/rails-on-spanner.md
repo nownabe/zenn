@@ -30,9 +30,7 @@ published: false
 
 # Cloud Spanner はいいぞ
 
-まずは [Cloud Spanner](https://cloud.google.com/spanner?hl=ja) とはなにかを簡単に説明します。[Spanner](https://research.google/pubs/pub39966/) は Google が開発したデータベースで、多くの Google サービスのバックエンドとして利用されています。Spanner を Google Cloud のサービスとして提供しているものが Cloud Spanner です。
-
-Spanner は NewSQL と呼ばれることもあり、RDBMS の特徴 (スキーマ、SQL クエリ、ACID トランザクションなど) を持ちつつ水平スケールする分散データベースです。
+まずは [Cloud Spanner](https://cloud.google.com/spanner?hl=ja) とはなにかを簡単に説明します。[Spanner](https://research.google/pubs/pub39966/) は Google が開発したデータベースで、多くの Google サービスのバックエンドとして利用されています。Spanner を Google Cloud のサービスとして提供しているものが Cloud Spanner です。Spanner は NewSQL と呼ばれることもあり、RDBMS の特徴 (スキーマ、SQL クエリ、ACID トランザクションなど) を持ちつつ水平スケールする分散データベースです。
 
 Cloud Spanner のことを既にご存知の方はこのセクションはスキップしてください。
 
@@ -1001,3 +999,7 @@ Rails 7 では `upsert`/`upsert_all` がエラーになります。
 本記事では Cloud Spanner を Ruby on Rails で使うための基本的な使い方を説明しました。ActiveRecord から使うときにハマりポイントはありますが、通常のデータベースとして利用でき、クラウドらしい様々な恩恵を受けることができます。ぜひ一度試してみてください。
 
 もし使ってみて、バグ等を発見したらぜひ [Issue](https://github.com/googleapis/ruby-spanner-activerecord/issues/new/choose) で報告してください。Issue 作成のハードルが高いという場合は本記事のコメントで教えてください。
+
+最後に、まずは Cloud Spanner を触ってみたいという方はこちらの記事で無料トライアル インスタンスの使い方がわかりやすく紹介されているのでぜひ試してみてください。
+
+https://zenn.dev/google_cloud_jp/articles/how-to-use-free-trial-spanner
