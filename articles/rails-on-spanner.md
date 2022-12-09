@@ -97,15 +97,16 @@ Cloud Spanner といえば高いというイメージがありますよね。Clo
 [^5]: [スキーマについて  |  Cloud Spanner  |  Google Cloud](https://cloud.google.com/spanner/docs/schema-and-data-model#choosing_a_primary_key)
 [^6]: ドキュメントは日本語でもしっかり整備されているので一読すれば安心できるでしょう。 [スキーマ設計  |  Cloud Spanner  |  Google Cloud](https://cloud.google.com/spanner/docs/schema-design)
 
-2 つ目は、開発用インスタンスの必要性です。Cloud Spanner は OSS ではないためローカルマシンで動作しません。[エミュレータ](https://cloud.google.com/spanner/docs/emulator?hl=ja)はありますがデータの永続化できず本番環境との差分もいくつかあります。そのためテストには十分ですが開発用途としては不十分であり、本番用とは別に開発用のインスタンスも必要になるケースが多いです。最低料金のインスタンスでも 10 個のデータベースを作成できるので、開発用にインスタンスを 1 つ作成するような形がいいでしょう。場合によっては[無料のトライアル インスタンス](https://cloud.google.com/blog/ja/products/spanner/spanner-sample-apps-and-free-trial-instance)を使った開発も可能です。
+2 つ目は、開発用インスタンスの必要性です。Cloud Spanner は OSS ではないためローカルマシンで動作しません。[エミュレータ](https://cloud.google.com/spanner/docs/emulator?hl=ja)はありますがデータの永続化できず本番環境との差分もいくつかあります。そのためテストには十分ですが開発用途としては不十分であり、本番用とは別に開発用のインスタンスも必要になるケースが多いです。最低料金のインスタンスでも 10 個のデータベースを作成できるので、開発用にインスタンスを 1 つ作成するような形がいいでしょう。初期段階の検証や開発には[無料のトライアル インスタンス](https://cloud.google.com/blog/ja/products/spanner/spanner-sample-apps-and-free-trial-instance)も利用できます。
 
 3 つ目は、ActiveRecord Spanner Adapter の成熟度です。まだリリースして 1 年であり成熟しているとは言えません。世に出ている情報もまだ少ないですし様々な壁にぶつかる可能性があります。現段階では問題があれば自力でなんとかしてやるぜ、ぐらいの気概を持って使った方がいいかもしれません。
 
 ## 結局、どんなアプリに向いてるの？
 
-まとめとして、次のうちいずれかの要件があるアプリケーションには Cloud Spanner が適しているでしょう。
+まとめとして、Cloud Spanner は次のうちいずれかの要件があるアプリケーションには特に適しているでしょう。
 
 * シャーディングが必要
+* 書き込みのスケーラビリティが必要
 * リージョン障害にも耐えるような高い可用性が必要
 * メンテナンスによるダウンタイムを許容できない
 * 運用負荷をできるだけ削減して開発にリソースを集中させたい
