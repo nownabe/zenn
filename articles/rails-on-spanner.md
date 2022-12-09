@@ -34,6 +34,8 @@ published: false
 
 Spanner は NewSQL と呼ばれることもあり、RDBMS の特徴 (スキーマ、SQL クエリ、ACID トランザクションなど) を持ちつつ水平スケールする分散データベースです。
 
+Cloud Spanner のことを既にご存知の方はこのセクションはスキップしてください。
+
 ## 運用がとても楽
 
 Cloud Spanner には従来の RDBMS と比較すると次のような特徴があります。
@@ -74,35 +76,40 @@ Cloud Spanner を使えばもう複雑な画面を前に悩む必要はありま
 
 ## でも、お高いんじゃない？
 
-Cloud Spanner といえば高いというイメージがありますよね。Cloud Spanner はノード単位で課金され、以前は 1 ノードが最小サイズだったため最低利用料金が高額でした。しかし、[Processing Units](https://cloud.google.com/spanner/docs/compute-capacity) という 1 ノードをより細かく分割したような単位でインスタンスをデプロイできるようになり状況は変わりました。
+Cloud Spanner といえば高いというイメージがありますよね。Cloud Spanner はノード単位の課金で、以前は 1 ノードが最小サイズだったため最低利用料金が高額でした。しかし、[Processing Units](https://cloud.google.com/spanner/docs/compute-capacity) という 1 ノードをより細かく分割したような単位でインスタンスをデプロイできるようになり、それに伴い最低利用料金も下がりました。
 
-例えば、スモールスタートな本番環境を想定した Cloud SQL (MySQL) と比較してみましょう。条件は以下のように設定して、見積もりには [Google Cloud 料金計算ツール](https://cloud.google.com/products/calculator) を利用します。
+例えば、本番環境向けの Cloud SQL for MySQL と Cloud Spanner の最小構成[^3]を [Google Cloud 料金計算ツール](https://cloud.google.com/products/calculator#id=6dad25ff-b343-41c1-bfaf-c6b84549e730) で比較してみると次のようになります。インスタンス サイズ以外の条件としては、東京リージョン、高可用性あり、SSD ディスク 100GB、バックアップ 300GB です。
 
-* 東京リージョン
-* 高可用性
-* 専用 vCPU
-* データ容量 100 GB
-* バックアップ 300 GB
-
-[結果](https://cloud.google.com/products/calculator/#id=14090fb8-dd32-4f99-995d-0de0d5f50f04)は次のようになりました。
-
-* Cloud SQL 203.62 ドル/月
+* Cloud SQL for MySQL 203.62 ドル/月
 * Cloud Spanner 154.41 ドル/月
 
-このように、単純に Cloud Spanner の方が高いという結果にはなりません。運用コストや構築の容易さ、サーバーレス プロダクトとの相性の良さ等も考えると十分にコスト優位性が出てくるようになっています。
+この構成で性能を比較すると一般的には Cloud SQL の方が高性能となりますが[^4]、Cloud Spanner の方が安くスモール スタートできるという事実は意外ではないでしょうか。このように、単純に Cloud Spanner の方が高いという結果にはなりません。ただし性能を追加していくとコストも増加しくため、適切なパフォーマンス テストを実施した上で運用コストや構築の容易さ、スケーラビリティ、サーバーレス プロダクトとの相性の良さ等を総合的に見て比較する必要があります。
+
+[^3]: Cloud SQL にはより小さいインスタンスもありますが開発用途であり SLA の適用外です。[インスタンスの設定について  |  Cloud SQL for MySQL  |  Google Cloud](https://cloud.google.com/sql/docs/mysql/instance-settings?hl=ja#settings-2ndgen)
+[^4]: 細かい構成・設定やユースケースにもよりますが、ざっくりと数倍〜数十倍のスループットの差が出ると考えてください。あくまでも超ざっくりとした目安なので実際に使用する際には開発するアプリケーションのユースケースにあわせてパフォーマンス テストを行ってください。
 
 ## 注意点
 
 ここまで、そんなに高くもなくメリットいっぱいあるよという説明をしましたが注意点もあります。
 
-1 つ目は、Cloud Spanner 性能を最大限発揮するためには Cloud Spanner の知識が必要になるということです。Cloud Spanner はサービスの成長に追従できると説明しましたが、そのためにはこのポイントを抑えておく必要があります。例えば、Cloud Spanner では主キーに連番を使うと自動シャーディングで上手くスケールしないケースがあります[^3]。従来の RDBMS ではスケールアップで対応できる可能性がありますが、Cloud Spanner の場合は自動シャーディングによるスケールアウトで対応しなければいけません。[^4]
+1 つ目は、Cloud Spanner 性能を最大限発揮するためには Cloud Spanner の知識が必要になるということです。Cloud Spanner はサービスの成長に追従できると説明しましたが、そのためにはこのポイントを抑えておく必要があります。例えば、Cloud Spanner では主キーに連番を使うと自動シャーディングで上手くスケールしないケースがあります[^5]。従来の RDBMS ではスケールアップで対応できる可能性がありますが、Cloud Spanner の場合は自動シャーディングによるスケールアウトで対応しなければいけません。[^6]
 
-[^3]: [スキーマについて  |  Cloud Spanner  |  Google Cloud](https://cloud.google.com/spanner/docs/schema-and-data-model#choosing_a_primary_key)
-[^4]: ドキュメントは日本語でもしっかり整備されているので一読すれば安心できるでしょう。 [スキーマ設計  |  Cloud Spanner  |  Google Cloud](https://cloud.google.com/spanner/docs/schema-design)
+[^5]: [スキーマについて  |  Cloud Spanner  |  Google Cloud](https://cloud.google.com/spanner/docs/schema-and-data-model#choosing_a_primary_key)
+[^6]: ドキュメントは日本語でもしっかり整備されているので一読すれば安心できるでしょう。 [スキーマ設計  |  Cloud Spanner  |  Google Cloud](https://cloud.google.com/spanner/docs/schema-design)
 
 2 つ目は、開発用インスタンスの必要性です。Cloud Spanner は OSS ではないためローカルマシンで動作しません。[エミュレータ](https://cloud.google.com/spanner/docs/emulator?hl=ja)はありますがデータの永続化できず本番環境との差分もいくつかあります。そのためテストには十分ですが開発用途としては不十分であり、本番用とは別に開発用のインスタンスも必要になるケースが多いです。最低料金のインスタンスでも 10 個のデータベースを作成できるので、開発用にインスタンスを 1 つ作成するような形がいいでしょう。場合によっては[無料のトライアル インスタンス](https://cloud.google.com/blog/ja/products/spanner/spanner-sample-apps-and-free-trial-instance)を使った開発も可能です。
 
 3 つ目は、ActiveRecord Spanner Adapter の成熟度です。まだリリースして 1 年であり成熟しているとは言えません。世に出ている情報もまだ少ないですし様々な壁にぶつかる可能性があります。現段階では問題があれば自力でなんとかしてやるぜ、ぐらいの気概を持って使った方がいいかもしれません。
+
+## 結局、どんなアプリに向いてるの？
+
+まとめとして、次のうちいずれかの要件があるアプリケーションには Cloud Spanner が適しているでしょう。
+
+* シャーディングが必要
+* リージョン障害にも耐えるような高い可用性が必要
+* メンテナンスによるダウンタイムを許容できない
+* 運用負荷をできるだけ削減して開発にリソースを集中させたい
+* スモール スタートしたいが安定性や高可用性、スケーラビリティも必要
 
 # 基本的な使い方
 
@@ -122,7 +129,7 @@ https://github.com/nownabe/example-google-cloud-ruby/tree/main/rails-on-spanner
 
 ## Cloud Spanner インスタンス作成
 
-`rails new` する前に Cloud Spanner インスタンスを作成しておきます。[Web UI](https://console.cloud.google.com/) でも `gcloud` コマンドでも作成できます。ここでは `gcloud` コマンドで作成する方法を紹介します[^5]。
+`rails new` する前に Cloud Spanner インスタンスを作成しておきます。[Web UI](https://console.cloud.google.com/) でも `gcloud` コマンドでも作成できます。ここでは `gcloud` コマンドで作成する方法を紹介します[^7]。
 
 ```sh
 gcloud spanner instances create rails-on-spanner \
@@ -133,7 +140,7 @@ gcloud spanner instances create rails-on-spanner \
 
 このコマンドで最小のインスタンスが東京リージョンに作成されます。
 
-[^5]: 事前に gcloud のインストールと初期化が必要です。[クイックスタート: Google Cloud CLI をインストールする  |  Google Cloud CLI のドキュメント](https://cloud.google.com/sdk/docs/install-sdk?hl=ja)
+[^7]: 事前に gcloud のインストールと初期化が必要です。[クイックスタート: Google Cloud CLI をインストールする  |  Google Cloud CLI のドキュメント](https://cloud.google.com/sdk/docs/install-sdk?hl=ja)
 
 ## Application Default Credentials の設定
 
@@ -260,9 +267,9 @@ Loading development environment (Rails 7.0.4)
   updated_at: Fri, 02 Dec 2022 06:38:31.642071966 UTC +00:00>]
 ```
 
-ここで気になる点として `id` がランダムな数値になっています。Cloud Spanner Adapter はデフォルトで主キーに INT64 型の UUID を利用します[^6]。これは Cloud Spanner の性能を引き出すための[ベストプラクティス](https://cloud.google.com/spanner/docs/schema-design?hl=ja#uuid_primary_key)のひとつです。
+ここで気になる点として `id` がランダムな数値になっています。Cloud Spanner Adapter はデフォルトで主キーに INT64 型の UUID を利用します[^8]。これは Cloud Spanner の性能を引き出すための[ベストプラクティス](https://cloud.google.com/spanner/docs/schema-design?hl=ja#uuid_primary_key)のひとつです。
 
-[^6]: UUID はよく見る文字列ではなく INT64 型になっています。ActiveRecord Cloud Spanner Adapter では元の UUID の先頭 4 bit は常に一定となるため捨てていて、厳密な UUID ではありません。
+[^8]: UUID はよく見る文字列ではなく INT64 型になっています。ActiveRecord Cloud Spanner Adapter では元の UUID の先頭 4 bit は常に一定となるため捨てていて、厳密な UUID ではありません。
 
 
 ## spanner-cli によるクエリ実行
@@ -397,9 +404,9 @@ comment1.post
 
 ## インターリーブの利用
 
-Cloud Spanner には[インターリーブ](https://cloud.google.com/spanner/docs/schema-and-data-model?hl=ja)という外部キーに似た機能があります。どちらも親子関係を表現できる機能ですが[^7]、インターリーブでは分散されたノードにおいて親と子が物理的に同じ場所に配置されるため多くの親子関係で外部キーよりパフォーマンスが向上します。
+Cloud Spanner には[インターリーブ](https://cloud.google.com/spanner/docs/schema-and-data-model?hl=ja)という外部キーに似た機能があります。どちらも親子関係を表現できる機能ですが[^9]、インターリーブでは分散されたノードにおいて親と子が物理的に同じ場所に配置されるため多くの親子関係で外部キーよりパフォーマンスが向上します。
 
-[^7]: インターリーブと外部キーの違いについては[こちら](https://cloud.google.com/spanner/docs/foreign-keys/overview?hl=ja#fk-and-table-interleaving)にまとまっています。
+[^9]: インターリーブと外部キーの違いについては[こちら](https://cloud.google.com/spanner/docs/foreign-keys/overview?hl=ja#fk-and-table-interleaving)にまとまっています。
 
 インターリーブすると子テーブルは複合主キーとなるので、ActiveRecord でインターリーブする場合は複合主キーを扱うために [composite_primary_keys](https://github.com/composite-primary-keys/composite_primary_keys) という gem が必要になります。
 
@@ -783,7 +790,7 @@ end
 
 ## upsert とミューテーション
 
-Cloud Spanner は upsert 用の構文[^8]をサポートしていません。Cloud Spanner で upsert を実現するためには SQL ではなく[ミューテーション](https://cloud.google.com/spanner/docs/modify-mutation-api?hl=ja) という方法を使う必要があります[^9]。そのため ActiveRecord Cloud Spanner Adapter では `upsert`/`upsert_all` メソッドをミューテーションで実装しています。
+Cloud Spanner は upsert 用の構文[^10]をサポートしていません。Cloud Spanner で upsert を実現するためには SQL ではなく[ミューテーション](https://cloud.google.com/spanner/docs/modify-mutation-api?hl=ja) という方法を使う必要があります[^11]。そのため ActiveRecord Cloud Spanner Adapter では `upsert`/`upsert_all` メソッドをミューテーションで実装しています。
 
 注意点として、Cloud Spanner はひとつのトランザクション内で SQL とミューテーションによるデータ更新を同時に扱うことができず、SQL を発行するようなトランザクション内で `upsert`/`upsert_all` メソッドを実行するとエラーになります。トランザクション内で upsert するためにはミューテーションを使うための特別なトランザクションを利用します。このトランザクションの中では SQL のかわりにミューテーションを発行します。
 
@@ -816,8 +823,8 @@ end
 現行バージョン (Rails 7.0.4、Cloud Spanner Adapter 1.2.2) では不具合のためミューテーションのトランザクション内でも upsert がエラーになります。
 :::
 
-[^8]: `ON DUPLICATE` や `ON CONFLICT`
-[^9]: [DML とミューテーションの比較  |  Cloud Spanner  |  Google Cloud](https://cloud.google.com/spanner/docs/dml-versus-mutations?hl=ja)
+[^10]: `ON DUPLICATE` や `ON CONFLICT`
+[^11]: [DML とミューテーションの比較  |  Cloud Spanner  |  Google Cloud](https://cloud.google.com/spanner/docs/dml-versus-mutations?hl=ja)
 
 ## テーブルコメントがない
 
