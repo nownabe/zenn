@@ -1,5 +1,5 @@
 ---
-title: "Rails でも Spanner を使いたい"
+title: "Ruby on Rails でも Spanner を使いたい"
 emoji: "🔧"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: [rails, ruby, gcp, googlecloud, cloudspanner]
@@ -9,7 +9,7 @@ published: false
 
 # はじめに
 
-2021 年末、[Cloud Spanner](https://cloud.google.com/spanner?hl=ja) に対応した [ActiveRecord Adapter](https://cloud.google.com/blog/ja/topics/developers-practitioners/scale-your-ruby-applications-active-record-support-cloud-spanner) がリリースされました。Cloud Spanner を使うと旧来の RDBMS と比べて運用が楽になったり、可用性が高くなったり、簡単にアプリケーションがスケーラブルになったりします。しかし、MySQL や PostgreSQL などと比較すると Rails 開発には馴染みがないため、Rails と Cloud Spanner の組合せはまだ少ないのが現状です。
+2021 年末、[Cloud Spanner](https://cloud.google.com/spanner?hl=ja) に対応した [ActiveRecord Adapter](https://cloud.google.com/blog/ja/topics/developers-practitioners/scale-your-ruby-applications-active-record-support-cloud-spanner) がリリースされました。Cloud Spanner を使うと従来の RDBMS と比べて運用が楽になったり、可用性が高くなったり、簡単にアプリケーションがスケーラブルになったりします。しかし、MySQL や PostgreSQL などと比較すると Ruby on Rails でのアプリ開発には馴染みがないため、Cloud Spanner との組合せはまだ少ないのが現状です。
 
 本記事ではそんな現状を解消すべく、Cloud Spanner とは何か、Ruby on Rails での Cloud Spanner の基本的な使い方、 Cloud Spanner 特有のハマりどころとその回避策を説明します。
 
@@ -64,17 +64,17 @@ Cloud Spanner には従来の RDBMS と比較すると次のような特徴が�
 
 Cloud Spanner を使えばもう複雑な画面を前に悩む必要はありません。
 
-もちろん、Cloud SQL はとてもいいサービスなので必要なときはぜひ安心して使ってください。この画面の長さは MySQL などオンプレ時代からある RDBMS のマネージド サービスに必要なものであり「Cloud SQL というサービスの複雑さ」とは少し違います。MySQL や PostgreSQL などの RDBMS も Cloud Spanner とはそれぞれ異なった良さがあります。Cloud Spanner、MySQL、PostgreSQL、どれが最も優れているということではないので必要に応じて使い分けてください。
+もちろん、Cloud SQL はとてもいいサービスなので要件が合うときはぜひ安心して使ってください。この画面の長さは MySQL などオンプレ時代からある RDBMS のマネージド サービスに必要なものであり「Cloud SQL というサービスの複雑さ」とは少し違います。MySQL や PostgreSQL などの RDBMS も Cloud Spanner とはそれぞれ異なった良さがあります。Cloud Spanner、MySQL、PostgreSQL、どれが最も優れているということではないので必要に応じて使い分けてください。例えば、これまでと同じような Rails アプリの開発・運用がしたいというケースであれば Cloud Spanner ではなく Cloud SQL でこれまでと同じ RDBMS を選択する方が適していると言えます。
 
 ## 開発が思ったより普通
 
-特殊なデータベースだから特殊な開発スキルが必要かというと、そんなことはありません。決してそこまで特殊ではなく MySQL や PostgreSQL と同じような RDBMS として利用できます。細かい使い勝手が違うことはありますが他の RDBMS 同士の差分と比べて学習量が特段大きいわけではありません。
+特殊なデータベースだから特殊な開発スキルが必要かというと、そんなことはありません。Cloud Spanner も MySQL や PostgreSQL と同じような RDBMS として利用できます。細かい使い勝手が違うことはありますが他の RDBMS 同士の差分と比べて学習量が特段大きいわけではありません。
 
 将来的に安心できるスキーマを設計するためには Cloud Spanner のベストプラクティスに従う必要がありますが、整備されたドキュメントを一通り読めば問題ないでしょう。他の RDBMS で正しく設計・開発ができる開発者であれば、慣れていない RDBMS を使う程度の苦労で Cloud Spanner を使うことができます。
 
 ## でも、お高いんじゃない？
 
-Cloud Spanner といえば高いというイメージがありますよね。しかし、[Processing Units](https://cloud.google.com/spanner/docs/compute-capacity) という単位でインスタンスをデプロイできるようになり状況は変わりました。
+Cloud Spanner といえば高いというイメージがありますよね。Cloud Spanner はノード単位で課金され、以前は 1 ノードが最小サイズだったため最低利用料金が高額でした。しかし、[Processing Units](https://cloud.google.com/spanner/docs/compute-capacity) という 1 ノードをより細かく分割したような単位でインスタンスをデプロイできるようになり状況は変わりました。
 
 例えば、スモールスタートな本番環境を想定した Cloud SQL (MySQL) と比較してみましょう。条件は以下のように設定して、見積もりには [Google Cloud 料金計算ツール](https://cloud.google.com/products/calculator) を利用します。
 
@@ -99,7 +99,7 @@ Cloud Spanner といえば高いというイメージがありますよね。し
 
 [^3]: ドキュメントは日本語でもしっかり整備されているので一読すれば安心できるでしょう。 [スキーマ設計  |  Cloud Spanner  |  Google Cloud](https://cloud.google.com/spanner/docs/schema-design)
 
-2 つ目は、開発用インスタンスの必要性です。Cloud Spanner は OSS ではないためローカルマシンで動作しません。[エミュレータ](https://cloud.google.com/spanner/docs/emulator?hl=ja)はありますが永続化できず本番環境との差分もいくつかあります。そのためテストには十分ですが開発用途としては不十分であり、本番用とは別に開発用のインスタンスも必要になるケースが多いです。最低料金のインスタンスでも 10 個のデータベースを作成できるので、開発用にインスタンスを 1 つ作成するような形がいいでしょう。
+2 つ目は、開発用インスタンスの必要性です。Cloud Spanner は OSS ではないためローカルマシンで動作しません。[エミュレータ](https://cloud.google.com/spanner/docs/emulator?hl=ja)はありますがデータの永続化できず本番環境との差分もいくつかあります。そのためテストには十分ですが開発用途としては不十分であり、本番用とは別に開発用のインスタンスも必要になるケースが多いです。最低料金のインスタンスでも 10 個のデータベースを作成できるので、開発用にインスタンスを 1 つ作成するような形がいいでしょう。場合によっては[無料のトライアル インスタンス](https://cloud.google.com/blog/ja/products/spanner/spanner-sample-apps-and-free-trial-instance)を使った開発も可能です。
 
 3 つ目は、ActiveRecord Spanner Adapter の成熟度です。まだリリースして 1 年であり成熟しているとは言えません。世に出ている情報もまだ少ないですし様々な壁にぶつかる可能性があります。現段階では問題があれば自力でなんとかしてやるぜ、ぐらいの気概を持って使った方がいいかもしれません。
 
@@ -259,16 +259,16 @@ Loading development environment (Rails 7.0.4)
   updated_at: Fri, 02 Dec 2022 06:38:31.642071966 UTC +00:00>]
 ```
 
-ここで気になる点として `id` がランダムな数値になっています。Cloud Spanner Adapter はデフォルトで主キーに UUID を利用します[^5]。これは Cloud Spanner の性能を引き出すための[ベストプラクティス](https://cloud.google.com/spanner/docs/schema-design?hl=ja#uuid_primary_key)のひとつです。
+ここで気になる点として `id` がランダムな数値になっています。Cloud Spanner Adapter はデフォルトで主キーに INT64 型の UUID を利用します[^5]。これは Cloud Spanner の性能を引き出すための[ベストプラクティス](https://cloud.google.com/spanner/docs/schema-design?hl=ja#uuid_primary_key)のひとつです。
 
-[^5]: UUID はよく見る文字列ではなく INT64 型になっています。Cloud Spanner Adapter では元の UUID の先頭 4 bit は常に一定となるため捨てていて、厳密な UUID ではありません。
+[^5]: UUID はよく見る文字列ではなく INT64 型になっています。ActiveRecord Cloud Spanner Adapter では元の UUID の先頭 4 bit は常に一定となるため捨てていて、厳密な UUID ではありません。
 
 
 ## spanner-cli によるクエリ実行
 
 MySQL や PostgreSQL を使った開発では `mysql` コマンドや `psql` コマンドを使って直接 SQL クエリを実行することがよくあります。Cloud Spanner では Web UI からクエリを実行して結果を得ることもできますが [spanner-cli](https://github.com/cloudspannerecosystem/spanner-cli) を使うと簡単にローカルから接続できます。
 
-インストールには [Go](https://go.dev/) が必要なのでまずは [Go をインストール](https://go.dev/doc/install)してください。[Homebrew を使ってインストール](https://formulae.brew.sh/formula/go)できます。
+インストールには [Go](https://go.dev/) が必要なのでまずは [Go をインストール](https://go.dev/doc/install)してください。様々なインストール方法がありますが、[Homebrew でインストール](https://formulae.brew.sh/formula/go)できます。
 
 ```sh
 brew install go
@@ -515,32 +515,7 @@ singer.tracks.pluck(:title)
 ```
 
 :::message alert
-現在、ActiveRecord Spanner Adapter のバグで子テーブルの保存がエラーになります。鋭意修正中ですが修正がリリースされるまで `ApplicationRecord` で以下のパッチを当ててください。
-
-```ruby:app/models/application_record.rb
-class ApplicationRecord < ActiveRecord::Base
-  primary_abstract_class
-
-  class << self
-    def _set_composite_primary_key_values(primary_keys, values)
-      primary_key_value = []
-      primary_key.each do |col|
-        value = values[col]
-
-        if value&.value.nil? && prefetch_primary_key?
-          value = ActiveModel::Attribute.from_database col, next_sequence_value, ActiveModel::Type::BigInteger.new
-          values[col] = value
-        end
-        if value.is_a? ActiveModel::Attribute
-          value = value.value
-        end
-        primary_key_value.append value
-      end
-      primary_key_value
-    end
-  end
-end
-```
+現行バージョン (Rails 7.0.4、Cloud Spanner Adapter 1.2.2) では不具合により子テーブルの保存がエラーになります。回避方法は後述します。
 :::
 
 ## 配列型の利用
@@ -746,6 +721,10 @@ Rake::Task["db:create"].enhance(["spanner:instance:create"])
 
 ここまで Rails 開発で基本的な使い方を紹介しました。ここからは Cloud Spanner 特有のハマりどころを紹介します。
 
+:::message
+2022-12-17 時点の情報です。将来改善される可能性があるものも含まれます。
+:::
+
 ## use_transactional_tests が使えない
 
 Minitest だと `use_transactional_tests`、RSpec だと `use_transactional_fixtures` が使えません。これは Cloud Spanner が `SAVEPOINT` 文をサポートしていないためです。同じ理由で `transaction(requires_new: true)` などによるネストされたトランザクションも使えません。
@@ -830,14 +809,14 @@ end
 => true
 ```
 
+データベースまわりでトラブルシュートが必要になったとき、その処理が SQL で実行されているか、ミューテーションで実行されているかを意識することも必要になってくるでしょう。
+
 :::message alert
-ただし、現行バージョン (Rails 7.0.4、Cloud Spanner Adapter 1.2.2) ではバグのためミューテーションのトランザクション内でも upsert がエラーになります。
+現行バージョン (Rails 7.0.4、Cloud Spanner Adapter 1.2.2) では不具合のためミューテーションのトランザクション内でも upsert がエラーになります。
 :::
 
 [^7]: `ON DUPLICATE` や `ON CONFLICT`
 [^8]: [DML とミューテーションの比較  |  Cloud Spanner  |  Google Cloud](https://cloud.google.com/spanner/docs/dml-versus-mutations?hl=ja)
-
-データベースまわりでトラブルシュートが必要になったとき、その処理が SQL で実行されているか、ミューテーションで実行されているかを意識することも必要になってくるでしょう。
 
 ## テーブルコメントがない
 
@@ -847,7 +826,9 @@ Cloud Spanner にはテーブルやカラムにコメントをつける機能が
 
 ここまで読んで気づいた方もいるかもしれませんが既知の不具合がいくつかあります。Rails 6 では問題ないが Rails 7 ではエラーになるという不具合もあります。
 
-既知のものは修正に向けて活動を始めているので時間が経てば解決すると思います。未知の不具合に遭遇した場合はぜひ [Issue](https://github.com/googleapis/ruby-spanner-activerecord/issues/new/choose) で報告してください。また、多くの開発で支障をきたしそうな不具合に関しては本記事にパッチを記載しているのでモンキーパッチで耐え忍ぶことも可能です。
+既知のものは修正に向けて活動を始めているので時間が経てば解決するはずです。未知の不具合を発見した場合はぜひ [Issue](https://github.com/googleapis/ruby-spanner-activerecord/issues/new/choose) で報告してください。また、多くの開発で支障をきたしそうな不具合に関しては本記事にパッチを記載しているのでモンキーパッチで耐え忍ぶことが可能です。
+
+本記事に記載している不具合は 2022-12-17 時点で [activerecord 7.0.4](https://rubygems.org/gems/activerecord/versions/7.0.4) と [activerecord-spanner-adapter 1.2.2](https://rubygems.org/gems/activerecord-spanner-adapter/versions/1.2.2) の Rubygem で確認しています。
 
 ## db:schema:load がエラーになる
 
@@ -961,9 +942,11 @@ ActiveRecord::ConnectionAdapters::Spanner::DatabaseStatements.pretend(FixturesPa
 
 インターリーブを使ったモデルの Fixture は少し複雑になるので [FactoryBot](https://github.com/thoughtbot/factory_bot) などを使った方がいいかもしれません。
 
-## インターリーブの小テーブルの保存に失敗する
+## インターリーブの子テーブルの保存に失敗する
 
-上述したバグです。Rails 7.0.x では `ApplicationRecord._set_composite_primary_key_values` をオーバーライドすることで対応できます。
+インターリーブされた子テーブルの保存がエラーになります。
+
+Rails 7.0.x では `ApplicationRecord` で `ActiveRecord::Base._set_composite_primary_key_values` をオーバーライドすることで対応できます。
 
 ```ruby:app/models/application_record.rb
 class ApplicationRecord < ActiveRecord::Base
