@@ -9,7 +9,7 @@ published: false
 
 # はじめに
 
-2021 年末、[Cloud Spanner](https://cloud.google.com/spanner?hl=ja) に対応した [ActiveRecord Adapter](https://cloud.google.com/blog/ja/topics/developers-practitioners/scale-your-ruby-applications-active-record-support-cloud-spanner) がリリースされました。Cloud Spanner を使うと従来の RDBMS と比べて運用が楽になったり、可用性が高くなったり、簡単にアプリケーションがスケーラブルになったりします。しかし、MySQL や PostgreSQL などと比較すると Ruby on Rails でのアプリ開発には馴染みがないため、Cloud Spanner との組合せはまだ少ないのが現状です。
+2021 年末、[Cloud Spanner](https://cloud.google.com/spanner?hl=ja) に対応した [ActiveRecord Adapter](https://cloud.google.com/blog/ja/topics/developers-practitioners/scale-your-ruby-applications-active-record-support-cloud-spanner) がリリースされました。Cloud Spanner を使うことで従来の RDBMS と比べて運用を楽にできたり、可用性を高くできたり、簡単にスケーラブルにできたりする可能性があります。しかし MySQL や PostgreSQL などと比較すると Ruby on Rails でのアプリ開発には馴染みがないため Cloud Spanner との組合せはまだ少ないのが現状です。
 
 本記事ではそんな現状を解消すべく、Cloud Spanner とは何か、Ruby on Rails での Cloud Spanner の基本的な使い方、 Cloud Spanner 特有のハマりどころとその回避策を説明します。
 
@@ -30,9 +30,21 @@ published: false
 
 # Cloud Spanner はいいぞ
 
-まずは [Cloud Spanner](https://cloud.google.com/spanner?hl=ja) とはなにかを簡単に説明します。[Spanner](https://research.google/pubs/pub39966/) は Google が開発したデータベースで、多くの Google サービスのバックエンドとして利用されています。Spanner を Google Cloud のサービスとして提供しているものが Cloud Spanner です。Spanner は NewSQL と呼ばれることもあり、RDBMS の特徴 (スキーマ、SQL クエリ、ACID トランザクションなど) を持ちつつ水平スケールする分散データベースです。
+まずは [Cloud Spanner](https://cloud.google.com/spanner?hl=ja) とはなにかを簡単に説明します。[Spanner](https://research.google/pubs/pub39966/) は Google が開発したデータベースで多くの Google サービスのバックエンドとして利用されています。NewSQL と呼ばれることもあり、リレーショナル DB の特徴 (スキーマ、SQL クエリ、ACID トランザクションなど) を持ちつつ水平スケールする分散データベースです。Spanner を Google Cloud のサービスとして提供しているものが Cloud Spanner です。
 
-Cloud Spanner のことを既にご存知の方はこのセクションはスキップしてください。
+Cloud Spanner の特徴についてこちらの記事で簡潔に説明されていたので引用します。
+
+https://zenn.dev/google_cloud_jp/articles/how-to-use-free-trial-spanner
+
+> Cloud Spanner の特徴をあげろと言われたら、僕はよくこの 3 つをあげています。
+>
+> * 運用が簡単（運用することがほぼ無い）
+> * 可用性が高い（99.999% の可用性を実現）
+> * 書き込みのスケールアウトができる
+> 
+> なんでこんな特徴が実現できているかというと、Cloud Spanenr は、ゾーンやリージョンをまたいだ同期レプリケーション と、 負荷状況にあわせた自動シャーディング、この 2 つの運用を 自動化 した分散データベースだからです。
+
+この説明で十分伝わる部分もありますが、以下でより詳しくアプリ設計・開発者向けに Cloud Spanner の特徴について説明します。Cloud Spanner のことを既にご存知の方はこのセクションは読み飛ばしてください。
 
 ## 運用がとても楽
 
@@ -48,7 +60,7 @@ Cloud Spanner には従来の RDBMS と比較すると次のような特徴が�
 
 特に、通常の運用でダウンタイムが発生しないという点は多くの開発・運用チームにとって大きな恩恵を受けられるポイントではないでしょうか。メンテのダウンタイムによるアラートで夜中に起こされたり、強制パッチのメンテ時間調整で疲弊したりすることがなくなります。
 
-また、サービスの成長に手間なくダウンタイムなく追従できる点も安心です。小さく始めたサービスでも成長するとデータベースのプライマリ インスタンスのスケールアップやシャーディングが必要になり、ダウンタイムや大幅な設計変更を伴うケースがあります。このようなケースでも Cloud Spanner ではノードを追加するだけで対応できて[^2]ダウンタイムも発生しません。
+また、サービスの成長に手間なくダウンタイムなく追従できる点も安心です。小さく始めたサービスでも成長するとデータベースのプライマリ インスタンスのスケールアップやシャーディングが必要になり、ダウンタイムや大幅な設計変更を伴うケースがあります。このような場合でも Cloud Spanner ではノードを追加するだけで対応できて[^2]ダウンタイムも発生しません。
 
 [^2]: スキーマがしっかりと設計されている必要はあります。
 
@@ -64,38 +76,38 @@ Cloud Spanner には従来の RDBMS と比較すると次のような特徴が�
 
 Cloud Spanner を使えばもう複雑な画面を前に悩む必要はありません。
 
-もちろん、Cloud SQL はとてもいいサービスなので要件が合うときはぜひ安心して使ってください。この画面の長さは MySQL などオンプレ時代からある RDBMS のマネージド サービスに必要なものであり「Cloud SQL というサービスの複雑さ」とは少し違います。MySQL や PostgreSQL などの RDBMS も Cloud Spanner とはそれぞれ異なった良さがあります。Cloud Spanner、MySQL、PostgreSQL、どれが最も優れているということではないので必要に応じて使い分けてください。例えば、これまでと同じような Rails アプリの開発・運用がしたいというケースであれば Cloud Spanner ではなく Cloud SQL でこれまでと同じ RDBMS を選択する方が適していると言えます。
+もちろん、Cloud SQL はとてもいいサービスなので要件が合うときはぜひ安心して使ってください。この画面の長さは MySQL などオンプレ時代からある RDBMS のマネージド サービスに必要なものであり「Cloud SQL というサービスの複雑さ」とは少し違います。MySQL や PostgreSQL などの RDBMS も Cloud Spanner とはそれぞれ異なった良さがあります。Cloud Spanner、MySQL、PostgreSQL、常にどれが最も優れているということではないので必要に応じて使い分けてください。例えば、これまでと同じような Rails アプリの開発・運用がしたいというケースであれば Cloud Spanner ではなく Cloud SQL でこれまでと同じ RDBMS を選択する方が適していると言えます。
 
 ## 開発が思ったより普通
 
-特殊なデータベースだから特殊な開発スキルが必要かというと、そんなことはありません。Cloud Spanner も MySQL や PostgreSQL と同じような RDBMS として利用できます。細かい使い勝手が違うことはありますが他の RDBMS 同士の差分と比べて学習量が特段大きいわけではありません。
+特殊なデータベースだから特殊な開発スキルが必要かというとそんなことはありません。Cloud Spanner も MySQL や PostgreSQL と同じような RDBMS として利用できます。細かい使い勝手が違うことはありますが他の RDBMS 同士の差分と比べて学習量が特段大きいわけではありません。
 
 将来的に安心できるスキーマを設計するためには Cloud Spanner の[ベストプラクティス](https://cloud.google.com/spanner/docs/best-practice-list)に従う必要がありますが、整備されたドキュメントを一通り読めば問題ないでしょう。他の RDBMS で正しく設計・開発ができる開発者であれば、慣れていない RDBMS を使う程度の苦労で Cloud Spanner を使うことができます。
 
 ## でも、お高いんじゃない？
 
-Cloud Spanner といえば高いというイメージがありますよね。Cloud Spanner はノード単位の課金で、以前は 1 ノードが最小サイズだったため最低利用料金が高額でした。しかし、[Processing Units](https://cloud.google.com/spanner/docs/compute-capacity) という 1 ノードをより細かく分割したような単位でインスタンスをデプロイできるようになり、それに伴い最低利用料金も下がりました。
+Cloud Spanner といえば高いというイメージがありますよね。Cloud Spanner はノード単位の課金で、以前は 1 ノードが最小サイズだったため最低利用料金が高額でした。しかし、[Processing Units](https://cloud.google.com/spanner/docs/compute-capacity) という 1 ノードをより細かく分割したような単位でインスタンスをデプロイできるようになり最低利用料金も下がりました。
 
 例えば、本番環境向けの Cloud SQL for MySQL と Cloud Spanner の最小構成[^3]を [Google Cloud 料金計算ツール](https://cloud.google.com/products/calculator#id=6dad25ff-b343-41c1-bfaf-c6b84549e730) で比較してみると次のようになります。インスタンス サイズ以外の条件としては、東京リージョン、高可用性あり、SSD ディスク 100GB、バックアップ 300GB です。
 
 * Cloud SQL for MySQL 203.62 ドル/月
 * Cloud Spanner 154.41 ドル/月
 
-この構成で性能を比較すると一般的には Cloud SQL の方が高性能となりますが[^4]、Cloud Spanner の方が安くスモール スタートできるという事実は意外ではないでしょうか。このように、単純に Cloud Spanner の方が高いという結果にはなりません。ただし性能を追加していくとコストも増加しくため、適切なパフォーマンス テストを実施した上で運用コストや構築の容易さ、スケーラビリティ、サーバーレス プロダクトとの相性の良さ等を総合的に見て比較する必要があります。
+この構成で性能を比較すると一般的には Cloud SQL の方が高性能となりますが[^4]、Cloud Spanner の方が安くスモール スタートできるという事実は意外ではないでしょうか。このように、単純に Cloud Spanner の方が高いという結果にはなりません。ただし性能を追加していくとコストも増加しくため、適切なパフォーマンス テストを実施した上で運用コストや構築の容易さ、スケーラビリティ、サーバーレス プロダクトとの相性の良さ等を見て総合的に比較する必要があります。
 
 [^3]: Cloud SQL にはより小さいインスタンスもありますが開発用途であり SLA の適用外です。[インスタンスの設定について  |  Cloud SQL for MySQL  |  Google Cloud](https://cloud.google.com/sql/docs/mysql/instance-settings?hl=ja#settings-2ndgen)
 [^4]: 細かい構成・設定やユースケースにもよりますが、ざっくりと数倍〜数十倍のスループットの差が出ると考えてください。あくまでも超ざっくりとした目安なので実際に使用する際には開発するアプリケーションのユースケースにあわせてパフォーマンス テストを行ってください。
 
 ## 注意点
 
-ここまで、そんなに高くもなくメリットいっぱいあるよという説明をしましたが注意点もあります。
+メリットだけでなく注意点もあります。
 
-1 つ目は、Cloud Spanner 性能を最大限発揮するためには Cloud Spanner の知識が必要になるということです。Cloud Spanner はサービスの成長に追従できると説明しましたが、そのためにはこのポイントを抑えておく必要があります。例えば、Cloud Spanner では主キーに連番を使うと自動シャーディングで上手くスケールしないケースがあります[^5]。従来の RDBMS ではスケールアップで対応できる可能性がありますが、Cloud Spanner の場合は自動シャーディングによるスケールアウトで対応しなければいけません。[^6]
+1 つ目は、Cloud Spanner 性能を最大限発揮するためには Cloud Spanner の知識が必要になるということです。例えば、Cloud Spanner では主キーに連番を使うと自動シャーディングで上手くスケールしないケースがあります[^5]。従来の RDBMS ではスケールアップで対応できる可能性がありますが、Cloud Spanner の場合は自動シャーディングによるスケールアウトで対応しなければいけません。[^6]
 
-[^5]: [スキーマについて  |  Cloud Spanner  |  Google Cloud](https://cloud.google.com/spanner/docs/schema-and-data-model#choosing_a_primary_key)
-[^6]: ドキュメントは日本語でもしっかり整備されているので一読すれば安心できるでしょう。 [スキーマ設計  |  Cloud Spanner  |  Google Cloud](https://cloud.google.com/spanner/docs/schema-design)
+[^5]: ActiveRecord Cloud Spanner Adapter では標準で対応されています。主キーの選択についてはこちらのドキュメントを参考にしてください。[スキーマについて  |  Cloud Spanner  |  Google Cloud](https://cloud.google.com/spanner/docs/schema-and-data-model#choosing_a_primary_key)
+[^6]: ドキュメントが日本語でもしっかり整備されているので一読すれば安心できるでしょう。 [スキーマ設計  |  Cloud Spanner  |  Google Cloud](https://cloud.google.com/spanner/docs/schema-design)
 
-2 つ目は、開発用インスタンスの必要性です。Cloud Spanner は OSS ではないためローカルマシンで動作しません。[エミュレータ](https://cloud.google.com/spanner/docs/emulator?hl=ja)はありますがデータの永続化できず本番環境との差分もいくつかあります。そのためテストには十分ですが開発用途としては不十分であり、本番用とは別に開発用のインスタンスも必要になるケースが多いです。最低料金のインスタンスでも 10 個のデータベースを作成できるので、開発用にインスタンスを 1 つ作成するような形がいいでしょう。初期段階の検証や開発には[無料のトライアル インスタンス](https://cloud.google.com/blog/ja/products/spanner/spanner-sample-apps-and-free-trial-instance)も利用できます。
+2 つ目は、開発用インスタンスの必要性です。Cloud Spanner は OSS ではないためローカルマシンで動作しません。[エミュレータ](https://cloud.google.com/spanner/docs/emulator?hl=ja)はありますがデータの永続化できず本番環境との差分もいくつかあります。そのためテストには十分ですが開発用途としては不十分であり、本番用とは別に開発用のインスタンスが必要になることも多いです。最小インスタンスでも 10 個のデータベースを作成できるので、開発用にインスタンスを 1 つ作成するような形がいいでしょう。初期段階の検証や開発には[無料のトライアル インスタンス](https://cloud.google.com/blog/ja/products/spanner/spanner-sample-apps-and-free-trial-instance)も利用できます。
 
 3 つ目は、ActiveRecord Spanner Adapter の成熟度です。まだリリースして 1 年であり成熟しているとは言えません。世に出ている情報もまだ少ないですし様々な壁にぶつかる可能性があります。現段階では問題があれば自力でなんとかしてやるぜ、ぐらいの気概を持って使った方がいいかもしれません。
 
@@ -220,11 +232,11 @@ rails db:create SKIP_TEST_DATABASE=true
 rails server
 ```
 
-ここまでが http://localhost:3000 にアクセスできるまでの初期設定になります。
+これで http://localhost:3000 にアクセスできるようになります。
 
 ## モデル作成
 
-モデルの作成はいつもどおりの方法で可能です。試しに `Post` というモデルを作成してみます。
+標準の方法でモデル作成が可能です。試しに `Post` というモデルを作成してみます。
 
 ```sh
 rails generate model Post text:string
@@ -266,16 +278,16 @@ Loading development environment (Rails 7.0.4)
   updated_at: Fri, 02 Dec 2022 06:38:31.642071966 UTC +00:00>]
 ```
 
-ここで気になる点として `id` がランダムな数値になっています。Cloud Spanner Adapter はデフォルトで主キーに INT64 型の UUID を利用します[^8]。これは Cloud Spanner の性能を引き出すための[ベストプラクティス](https://cloud.google.com/spanner/docs/schema-design?hl=ja#uuid_primary_key)のひとつです。
+ここで気になる点として `id` がランダムな数値になっています。Cloud Spanner Adapter はデフォルトで主キーに INT64 型の UUID を使用します[^8]。これは Cloud Spanner の性能を引き出すための[ベストプラクティス](https://cloud.google.com/spanner/docs/schema-design?hl=ja#uuid_primary_key)のひとつです。
 
 [^8]: UUID はよく見る文字列ではなく INT64 型になっています。ActiveRecord Cloud Spanner Adapter では元の UUID の先頭 4 bit は常に一定となるため捨てていて、厳密な UUID ではありません。
 
 
 ## spanner-cli によるクエリ実行
 
-MySQL や PostgreSQL を使った開発では `mysql` コマンドや `psql` コマンドを使って直接 SQL クエリを実行することがよくあります。Cloud Spanner では Web UI からクエリを実行して結果を得ることもできますが [spanner-cli](https://github.com/cloudspannerecosystem/spanner-cli) を使うと簡単にローカルから接続できます。
+MySQL や PostgreSQL を使った開発では `mysql` コマンドや `psql` コマンドを使って直接 SQL クエリを実行することがよくあります。Cloud Spanner では Web UI からクエリを実行して結果を得ることもできますが [spanner-cli](https://github.com/cloudspannerecosystem/spanner-cli) を使うとローカルから簡単に接続できます。
 
-インストールには [Go](https://go.dev/) が必要なのでまずは [Go をインストール](https://go.dev/doc/install)してください。様々なインストール方法がありますが、[Homebrew でインストール](https://formulae.brew.sh/formula/go)できます。
+インストールには [Go](https://go.dev/) が必要なのでまずは [Go をインストール](https://go.dev/doc/install)してください。様々なインストール方法がありますが [Homebrew でインストール](https://formulae.brew.sh/formula/go)できます。
 
 ```sh
 brew install go
@@ -296,7 +308,11 @@ go install github.com/cloudspannerecosystem/spanner-cli@latest
 インストールできたら次のようにプロジェクト、インスタンス、データベースを指定して接続します。
 
 ```sh
-$ spanner-cli -p $SPANNER_PROJECT_ID -i $SPANNER_INSTANCE_ID -d $SPANNER_DATABASE_ID
+# config/database.yml と同じものを指定する
+$ spanner-cli \
+  -p $SPANNER_PROJECT_ID \
+  -i $SPANNER_INSTANCE_ID \
+  -d $SPANNER_DATABASE_ID
 
 Connected.
 spanner> select * from posts;
@@ -335,9 +351,7 @@ spanner>
 
 ## アソシエーション
 
-Cloud Spanner でも通常の方法でアソシエーションを扱えます。
-
-Post モデルに紐づく Comment モデルを作成します。
+標準の方法でアソシエーションを扱えます。Post モデルに紐づく Comment モデルを作成してみます。
 
 ```sh
 rails g model Comment post:references text:string
@@ -407,13 +421,13 @@ Cloud Spanner には[インターリーブ](https://cloud.google.com/spanner/doc
 
 [^9]: インターリーブと外部キーの違いについては[こちら](https://cloud.google.com/spanner/docs/foreign-keys/overview?hl=ja#fk-and-table-interleaving)にまとまっています。
 
-インターリーブすると子テーブルは複合主キーとなるので、ActiveRecord でインターリーブする場合は複合主キーを扱うために [composite_primary_keys](https://github.com/composite-primary-keys/composite_primary_keys) という gem が必要になります。
+インターリーブすると子テーブルは複合主キーとなるので [composite_primary_keys](https://github.com/composite-primary-keys/composite_primary_keys) という Rubygem が必要になります。
 
 ```ruby:Gemfile
 gem "composite_primary_keys", "~> 14.0.4"
 ```
 
-例えば、インタリーブを使った親子関係を持つ `Singer`、`Album`、`Track` という 3 つのモデルのスキーマ定義は次のようにします。
+例えば、インターリーブを使って親子関係を持つ `Singer`、`Album`、`Track` という 3 つのモデルのスキーマ定義は次のようになります。
 
 ```ruby
 create_table :singers, id: false do |t|
@@ -492,7 +506,7 @@ class Track < ApplicationRecord
 end
 ```
 
-モデルのアソシエーションの使い方は通常の使い方と同じです。
+使い方は通常と同じです。
 
 ```ruby
 singer = Singer.create!(name: "ずっと真夜中でいいのに")
