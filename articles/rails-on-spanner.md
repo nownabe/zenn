@@ -536,7 +536,7 @@ singer.tracks.pluck(:title)
 ```
 
 :::message alert
-現行バージョン (Rails 7.0.4、Cloud Spanner Adapter 1.2.2) では不具合により子テーブルの保存がエラーになります。回避方法は後述します。
+現行バージョン (Rails 7.0.4、Cloud Spanner Adapter 1.2.2) では `partial_inserts` が無効になっている場合、子テーブルの保存がエラーになります。回避方法は後述します。
 :::
 
 ## 配列型の利用
@@ -963,11 +963,37 @@ ActiveRecord::ConnectionAdapters::Spanner::DatabaseStatements.pretend(FixturesPa
 
 インターリーブを使ったモデルの Fixture は少し複雑になるので [FactoryBot](https://github.com/thoughtbot/factory_bot) などを使った方がいいかもしれません。
 
-## インターリーブの子テーブルの保存に失敗する
+## インターリーブの子テーブルの保存がエラーになる
 
-インターリーブされた子テーブルの保存がエラーになります。
+Rails 7 で ActiveRecord の [`partial_inserts`](https://edgeguides.rubyonrails.org/configuring.html#config-active-record-partial-inserts) が無効になっている場合、インターリーブされた子テーブルの保存がエラーになります。Rails 7 のデフォルトは無効化されているため特に設定していない場合はエラーになります。
 
-Rails 7.0.x では `ApplicationRecord` で `ActiveRecord::Base._set_composite_primary_key_values` をオーバーライドすることで対応できます。
+`partial_inserts` を有効にするか、パッチを当てるかで対応してください。
+
+`partial_inserts` を有効にする場合はRails アプリ全体に設定するか各モデルで設定できます。
+
+```ruby
+# アプリ全体で設定する場合
+# config/application.rb
+
+module MyApp
+  class Application < Rails::Application
+    #...
+
+    config.active_record.partial_inserts = true
+  end
+end
+
+# モデルごとに設定する場合
+# app/models/album.rb
+
+class Album < ApplicationRecord
+  self.partial_inserts = true
+
+  # ...
+end
+```
+
+`partial_inserts` を有効化しない場合は `ApplicationRecord` で `ActiveRecord::Base._set_composite_primary_key_values` をオーバーライドすることで対応できます。
 
 ```ruby:app/models/application_record.rb
 class ApplicationRecord < ActiveRecord::Base
