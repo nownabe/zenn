@@ -849,7 +849,7 @@ Cloud Spanner にはテーブルやカラムにコメントをつける機能が
 
 既知のものは修正に向けて活動を始めているので時間が経てば解決するはずです。未知の不具合を発見した場合はぜひ [Issue](https://github.com/googleapis/ruby-spanner-activerecord/issues/new/choose) で報告してください。また、多くの開発で支障をきたしそうな不具合に関しては本記事にパッチを記載しているのでモンキーパッチで耐え忍ぶことが可能です。
 
-本記事に記載している不具合は 2022-12-17 時点で [activerecord 7.0.4](https://rubygems.org/gems/activerecord/versions/7.0.4) と [activerecord-spanner-adapter 1.2.2](https://rubygems.org/gems/activerecord-spanner-adapter/versions/1.2.2) の Rubygem で確認しています。
+本記事に記載している不具合は 2022-12-17 時点で、 [activerecord 7.0.4](https://rubygems.org/gems/activerecord/versions/7.0.4) と [activerecord-spanner-adapter 1.2.2](https://rubygems.org/gems/activerecord-spanner-adapter/versions/1.2.2) で確認しています。
 
 ## db:schema:load がエラーになる
 
