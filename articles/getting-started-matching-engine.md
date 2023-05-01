@@ -336,19 +336,19 @@ Index の作成には 1 時間程度かかります。作成ジョブの状態�
 
 IndexEndpoint には接続方法によって 3 種類あります。
 
-| 接続方法                      | 接続元       | リリース段階 | 認証       |
-|-------------------------------|--------------|--------------|------------|
-| [Private Service Access (PSA)](https://cloud.google.com/vertex-ai/docs/matching-engine/deploy-index-vpc)  | 指定した VPC | 一般提供     | どちらでも |
-| [Private Service Connect (PSC)](https://cloud.google.com/vertex-ai/docs/matching-engine/match-eng-setup/private-service-connect) | 指定した VPC | プレビュー   | どちらでも |
-| [Public endpoint](https://cloud.google.com/vertex-ai/docs/matching-engine/deploy-index-public#deploy_index_default-drest)               | どこからでも | プレビュー   | 必須       |
+| 接続方法                                                                                                                         | 接続元       | 認証の有無   | リリース段階 |
+|----------------------------------------------------------------------------------------------------------------------------------|--------------|--------------|--------------|
+| [Private Service Access (PSA)](https://cloud.google.com/vertex-ai/docs/matching-engine/deploy-index-vpc)                         | 指定した VPC | あり or なし | 一般提供     |
+| [Private Service Connect (PSC)](https://cloud.google.com/vertex-ai/docs/matching-engine/match-eng-setup/private-service-connect) | 指定した VPC | あり or なし | プレビュー   |
+| [Public endpoint](https://cloud.google.com/vertex-ai/docs/matching-engine/deploy-index-public#deploy_index_default-drest)        | どこからでも | あり         | プレビュー   |
 
-つまり、IndexEndpoint はデプロイしたインデックスをネットワーク的にどこから使うかを設定します。PSA と PSC の IndexEndpoint は接続した VPC からのみアクセスできるようになります。一方、public endpoint の IndexEndpoint はパブリックなエンドポイントでアクセスできるようになります。
+つまり、IndexEndpoint はデプロイしたインデックスをネットワーク的にどこから使うかを設定します。PSA と PSC の IndexEndpoint は接続した VPC からのみアクセスできるようになります。一方、public endpoint の IndexEndpoint はパブリックなエンドポイントでアクセスできるようになります。また、PSA と PSC では VPC からアクセスするため認証なしでアクセス可能ですが、public endpoint は認証が必須です。
 
-本記事ではサーバーレスとの相性が良かったり、他クラウドからも使いやすかったりする Public endpoint を使います。ただし、public endpoint は執筆時点ではまだ Preview です。
+本記事ではサーバーレスとの相性が良かったり、他クラウドからも使いやすかったりする Public endpoint を使います。ただし、public endpoint は執筆時点ではまだプレビューです。
 
 #### Public Endpoint の IndexEndpoint を作成する
 
-Public Endpoin の IndexEndpoint の作成は現時点で gcloud からできないので、`curl` コマンドで [API](https://cloud.google.com/vertex-ai/docs/reference/rest/v1/projects.locations.indexEndpoints/create) をコールします。
+現時点で public endpoint の IndexEndpoint は gcloud では作成できません。`curl` コマンドで [API](https://cloud.google.com/vertex-ai/docs/reference/rest/v1/projects.locations.indexEndpoints/create) をコールします。
 
 ```bash
 curl -X POST \
@@ -364,7 +364,7 @@ IndexEndpoint の作成はすぐに終了します。
 
 #### デプロイ時の設定項目
 
-作成した Index を作成した IndexEndpoint にデプロイすると ANN のクエリを実行できるようになります。このとき、デプロイに関していくつかの設定が必要になります。この設定は、API では [DeployedIndex](https://cloud.google.com/vertex-ai/docs/reference/rest/v1/projects.locations.indexEndpoints/deployIndex) というオブジェクトとして表されます。
+作成した Index を作成した IndexEndpoint にデプロイすると ANN のクエリを実行できるようになります。このときデプロイに関していくつかの設定が必要になります。この設定は API では [DeployedIndex](https://cloud.google.com/vertex-ai/docs/reference/rest/v1/projects.locations.indexEndpoints/deployIndex) というオブジェクトとして表されます。
 
 以下は本記事で設定する項目の簡単な説明です。詳細はドキュメントを参照してください。
 
@@ -373,15 +373,12 @@ IndexEndpoint の作成はすぐに終了します。
 | id                      | DeployedIndex の ID                |
 | index                   | デプロイする Index の name         |
 | dedicatedResources      | マシンタイプとオートスケールの設定 |
-| deployedIndexAuthConfig | 認証に関する設定                   |
 
-DeployedIndex には、マシンタイプやオートスケールの設定がひも付きます。特に指定しない場合は自動で設定されますが、`dedicatedResources` フィールドで小さいマシンタイプを指定すると初期コストを抑えてスモールスタートが可能です。
+DeployedIndex にはマシンタイプやオートスケールの設定が紐付きます。特に指定しない場合は自動で設定されますが、`dedicatedResources` フィールドで小さいマシンタイプを指定すると初期コストを抑えてスモールスタートが可能です。
 
 #### Index をデプロイする
 
-Index を IndexEndpoint へデプロイするために、Index と IndexEndpoint のリソース名が必要です。
-
-それぞれ、次のように gcloud コマンドで調べられます。
+Index を IndexEndpoint へデプロイするために、Index と IndexEndpoint のリソース名が必要です。それぞれ、次のように gcloud コマンドで調べられます。
 
 ```bash
 # Index のリソース名を表示
@@ -395,9 +392,9 @@ gcloud ai index-endpoints list \
   --format "value(displayName,name)"
 ```
 
-現時点で gcloud は `dedicatedResources` が設定できないため、Index の作成や IndexEndpoint の作成と同様に `curl` で [API](https://cloud.google.com/vertex-ai/docs/reference/rest/v1/projects.locations.indexEndpoints/deployIndex) をコールします。
+現時点で gcloud は `dedicatedResources` が設定できないため、Index の作成や IndexEndpoint の作成と同様に curl コマンドで [API](https://cloud.google.com/vertex-ai/docs/reference/rest/v1/projects.locations.indexEndpoints/deployIndex) をコールします。
 
-リクエストボディは次のようになります。`Index のリソース名` は上で調べたものに置き換えてください。`YOUR-PROJECT` は自分のプロジェクト ID に置き換えてください。
+リクエストボディは次のようになります。`Index のリソース名` は上で調べたものに置き換えてください。
 
 ```json:deploy_index.json
 {
@@ -414,7 +411,7 @@ gcloud ai index-endpoints list \
 }
 ```
 
-API を実行します。
+curl コマンドを実行します。
 
 ```bash
 curl -X POST \
@@ -424,7 +421,7 @@ curl -X POST \
   -d @deploy_index.json
 ```
 
-Index のデプロイには数十分程度かかります。デプロイジョブの状態は[コンソール](https://console.cloud.google.com/vertex-ai/matching-engine/index-endpoints)や `gcloud ai operations describe` コマンドで確認できます。気長に待ちましょう。
+Index のデプロイには数十分程度かかります。デプロイジョブの状態は[コンソール](https://console.cloud.google.com/vertex-ai/matching-engine/index-endpoints)や `gcloud ai operations describe` コマンドで確認できます。
 
 ### 検索クエリの実行
 
