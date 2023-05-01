@@ -114,10 +114,14 @@ Vertex AI の機能を有効化します。
 gcloud services enable aiplatform.googleapis.com
 ```
 
-検索クエリを実行する [Service Account](https://cloud.google.com/iam/docs/service-account-overview?hl=ja) を作成します。
+検索クエリを実行する [Service Account](https://cloud.google.com/iam/docs/service-account-overview?hl=ja) を作成して必要な権限を付与します。ここでは Matching Engine へのクエリ実行やストリーム更新ができるように [Vertex AI User (roles/aiplatform.user) ロール](https://cloud.google.com/vertex-ai/docs/general/access-control#predefined-roles) を付与します。
 
 ```bash
 gcloud iam service-accounts create query-runner
+gcloud projects add-iam-policy-binding \
+  "$(gcloud config get project)" \
+  --member "serviceAccount:query-runner@$(gcloud config get project).iam.gserviceaccount.com" \
+  --role roles/aiplatform.user
 ```
 
 Index 作成時に登録するエンベディングを格納する Cloud Storage バケットを作成します。
@@ -427,7 +431,7 @@ Index のデプロイには数十分程度かかります。デプロイジョ�
 
 #### クエリ画像をダウンロードする
 
-検索クエリとする画像をローカルにダウンロードしておきます。どのような画像でもクエリにはなりますが、現在 Index にデイジーと薔薇の画像しか登録されていないので、ここでは同じように花の画像を使います。
+類似画像を探す画像をローカルにダウンロードしておきます。どのような画像でもクエリにはなりますが、この時点で Index にはデイジーと薔薇の画像しか登録されていないので、ここでは同じように花の画像を使います。
 
 サンプルデータのデイジーの画像と、Index に登録されていないチューリップの画像ををいくつかダウンロードします。
 
@@ -462,6 +466,7 @@ import tensorflow as tf
 tf.keras.utils.disable_interactive_logging()
 
 
+# 指定されたパスの画像ファイルを EfficientNetB0 でベクトル化する
 def file_to_embedding(model: tf.keras.Model, path: str) -> list[float]:
     raw = tf.io.read_file(path)
     image = tf.image.decode_jpeg(raw, channels=3)
@@ -478,6 +483,8 @@ class Matcher:
             client_options={"api_endpoint": self._public_endpoint()}
         )
 
+    # Matching Engine にリクエストして、
+    # 与えられたエンベディングの近似最近傍探索を行う
     def find_neighbors(self, embedding: list[float], neighbor_count: int):
         datapoint = vertexai.IndexDatapoint(
             datapoint_id="dummy-id",
@@ -494,6 +501,7 @@ class Matcher:
 
         return resp.nearest_neighbors[0].neighbors
 
+    # IndexEndpoint の public endpoint を取得する
     def _public_endpoint(self) -> str:
         endpoint = MatchingEngineIndexEndpoint(
             index_endpoint_name=self._index_endpoint_name
@@ -539,17 +547,6 @@ if __name__ == "__main__":
     main()
 ```
 
-#### Service Account に権限を付与する
-
-今回はサービスアカウントの権限でクエリを実行します。そのためにサービスアカウントへ [Vertex AI User (roles/aiplatform.user) ロール](https://cloud.google.com/vertex-ai/docs/general/access-control#predefined-roles) を付与します。
-
-```bash
-gcloud projects add-iam-policy-binding \
-  "$(gcloud config get project)" \
-  --member "serviceAccount:query-runner@$(gcloud config get project).iam.gserviceaccount.com" \
-  --role roles/aiplatform.user
-```
-
 #### Service Account のキーファイルをダウンロードする
 
 ローカルマシンから Service Account として実行できるようにキーファイルをダウンロードします。
@@ -562,7 +559,7 @@ gcloud iam service-accounts keys create \
 
 #### 類似画像検索クエリを実行する
 
-アプリケーション デフォルト認証情報として Service Account を利用できるように [`GOOGLE_APPLICATION_CREDENTIALS`](https://cloud.google.com/docs/authentication/application-default-credentials?hl=ja#GAC) 環境変数を設定します。
+アプリケーション デフォルト認証情報としてキーファイルを利用できるように [`GOOGLE_APPLICATION_CREDENTIALS`](https://cloud.google.com/docs/authentication/application-default-credentials?hl=ja#GAC) 環境変数を設定します。
 
 ```bash
 export GOOGLE_APPLICATION_CREDENTIALS=credentials.json
@@ -597,7 +594,7 @@ ai-platform/flowers/daisy/17027891179_3edc08f4f6.jpg    distance=62.160308837890
 ai-platform/flowers/daisy/676120388_28f03069c3.jpg      distance=61.204811096191406
 ```
 
-それぞれの行が入力エンベディングに類似するエンベディングを持つ Datapoint です。左が Datapoint の ID で、右の `distance` が類似度です。
+それぞれの行が入力エンベディングに類似するエンベディングを持つ IndexDatapoint です。左のパスが IndexDatapoint の ID で右の `distance` が類似度です。
 
 入力画像 (`flowers/daisy/100080576_f52e8ee070_n.jpg`) が最も高い類似度となっています。
 
@@ -616,7 +613,7 @@ open flowers/daisy/15207766_fc2f1d692c_n.jpg
 ![類似画像](/images/articles/getting-started-matching-engine/output1.jpg)
 *2 番目に類似度が高かったデイジー画像*
 
-その他の類似画像を見たり、他の画像 (花以外でも) でもクエリを実行してみてください。
+その他の類似画像を見たり他の画像 (花以外でも) でクエリを実行したりしてみてください。
 
 ### Index のストリーム更新
 
@@ -643,6 +640,8 @@ ai-platform/flowers/roses/15681454551_b6f73ce443_n.jpg  distance=80.432319641113
 ![input tulip](/images/articles/getting-started-matching-engine/input_tulip.jpg)
 *入力画像のチューリップ*
 
+類似度の高い薔薇の画像が返ります。
+
 ![output2](/images/articles/getting-started-matching-engine/output2.jpg)
 *最も類似度が高かった薔薇の画像*
 
@@ -668,6 +667,7 @@ import tensorflow as tf
 tf.keras.utils.disable_interactive_logging()
 
 
+# 指定されたパスの画像を EfficientNetB0 でベクトル化する
 def file_to_embedding(model: tf.keras.Model, path: str) -> list[float]:
     raw = tf.io.read_file(path)
     image = tf.image.decode_jpeg(raw, channels=3)
@@ -685,10 +685,9 @@ class Upserter:
             client_options={"api_endpoint": api_endpoint}
         )
 
-    def upsert(self,
-               index_name: str,
-               datapoint_id: str,
-               embedding: list[float]) -> None:
+    # 与えられた ID とエンベディングから成る IndexDatapoint を
+    # 指定された Index に upsert する
+    def upsert(self, datapoint_id: str, embedding: list[float]) -> None:
         datapoint = IndexDatapoint(
             datapoint_id=datapoint_id,
             feature_vector=embedding,
@@ -769,7 +768,7 @@ ai-platform/flowers/roses/4558025386_2c47314528.jpg     distance=80.806594848632
 
 Vetex AI Matching Engine を使えば、Google が開発した高度な近似最近傍探索をフルマネージドで利用できます。今後 AI 活用が進む中で、ベクトルデータベース・ベクトル検索が必要なときの選択肢のひとつになるのではないでしょうか。
 
-若いサービスということもあり Matching Engine は SDK やドキュメントがまだ不足している部分がありますが、高頻度で改善されていてどんどん使いやすくなっています。もしクライアント ライブラリの使い方がわかりにくいという場合は、[API リファレンス](https://cloud.google.com/vertex-ai/docs/reference/rest)や [google-cloud-aiplatform](https://github.com/googleapis/python-aiplatform) のソースコードを参照することをオススメします。
+若いサービスということもあり Matching Engine は SDK やドキュメント、gcloud の対応がまだ不足している部分がありますが、高頻度で改善されていてどんどん使いやすくなっています。もしクライアント ライブラリの使い方がわかりにくいという場合は [API リファレンス](https://cloud.google.com/vertex-ai/docs/reference/rest)や [google-cloud-aiplatform](https://github.com/googleapis/python-aiplatform) のソースコードを参照することをオススメします。
 
 また、今回利用したコードはこちらにまとめてあります。コメントで利用したクラスやメソッドの定義元への URL をつけています。必要があれば参照してください。
 
