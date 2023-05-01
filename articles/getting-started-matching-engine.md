@@ -342,9 +342,7 @@ IndexEndpoint には接続方法によって 3 種類あります。
 | [Private Service Connect (PSC)](https://cloud.google.com/vertex-ai/docs/matching-engine/match-eng-setup/private-service-connect) | 指定した VPC | プレビュー   | どちらでも |
 | [Public endpoint](https://cloud.google.com/vertex-ai/docs/matching-engine/deploy-index-public#deploy_index_default-drest)               | どこからでも | プレビュー   | 必須       |
 
-つまり、IndexEndpoint はデプロイしたインデックスをネットワーク的にどこから使うかを設定します。
-
-PSA と PSC の IndexEndpoint は、接続した VPC からのみアクセスできるようになります。一方、public endpoint の IndexPoint はパブリックなエンドポイントでアクセスできるようになります。
+つまり、IndexEndpoint はデプロイしたインデックスをネットワーク的にどこから使うかを設定します。PSA と PSC の IndexEndpoint は接続した VPC からのみアクセスできるようになります。一方、public endpoint の IndexEndpoint はパブリックなエンドポイントでアクセスできるようになります。
 
 本記事ではサーバーレスとの相性が良かったり、他クラウドからも使いやすかったりする Public endpoint を使います。ただし、public endpoint は執筆時点ではまだ Preview です。
 
@@ -776,7 +774,7 @@ Vetex AI Matching Engine を使えば、Google が開発した高度な近似最
 
 若いサービスということもあり Matching Engine は SDK やドキュメントがまだ不足している部分がありますが、高頻度で改善されていてどんどん使いやすくなっています。もしクライアント ライブラリの使い方がわかりにくいという場合は、[API リファレンス](https://cloud.google.com/vertex-ai/docs/reference/rest)や [google-cloud-aiplatform](https://github.com/googleapis/python-aiplatform) のソースコードを参照することをオススメします。
 
-また、今回利用したコードはこちらにまとめてあります。こちらのコメントで利用したクラスやメソッドの定義元への URL をつけています。必要があれば参照してください。
+また、今回利用したコードはこちらにまとめてあります。コメントで利用したクラスやメソッドの定義元への URL をつけています。必要があれば参照してください。
 
 https://github.com/nownabe/google-cloud-examples/tree/main/python/getting-started-matching-engine
 
