@@ -3,6 +3,7 @@ title: "Vertex AI Matching Engine で使う Google のベクトル検索"
 emoji: "🤝"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: [gcp,vertexai,matchingengine,ai]
+publication_name: google_cloud_jp
 published: false
 ---
 
