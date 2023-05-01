@@ -1,5 +1,5 @@
 ---
-title: "Vertex AI Matching Engine で使う Google のベクトル検索"
+title: "Vertex AI Matching Engine: フルマネージドで利用する Google のベクトル検索"
 emoji: "🤝"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: [gcp,vertexai,matchingengine,ai]
@@ -11,13 +11,12 @@ published: false
 
 本記事では [Vertex AI Matching Engine](https://cloud.google.com/vertex-ai/docs/matching-engine/overview?hl=ja) とは何かを簡単に説明して、使い始めるための手順を説明します。本記事の目的は、ベクトル検索を実現するために Matching Engine を使えるようになってもらうことです。
 
-特に対象読者は限定せずに書いたつもりですが、このような内容になっています。
-
 * 記事全体を理解するためにはある程度のクラウドやプログラミングの知識が必要です
+  * 必要に応じて補足したり、リンクしたりしています
 * Matching Engine の背景にある論文等の解説はしません
 * 使い始めるための手順の中でいくつか選択肢があるとき、今後主流になりそうな選択肢の手順のみを説明します
 
-とにかくまずは使ってみたいという方は、[Vertex AI Matching Engine を使ってみる]()まで読み飛ばすか、次のチュートリアルを実施してください。
+とにかくまずは使ってみたいという方は、[Vertex AI Matching Engine を使ってみる](#vertex-ai-matching-engine-を使ってみる)まで読み飛ばすか、次のチュートリアルを実施してください。
 
 https://github.com/googlecloudplatform/matching-engine-tutorial-for-image-search
 
@@ -34,29 +33,32 @@ https://cloud.google.com/docs/get-started?hl=ja
 
 ## ベクトル検索で何ができるの？
 
-昨今ではテキスト、画像、ユーザー行動など様々なものを機械学習モデルによって意味のある多次元ベクトルとして表現[^1]できます (このようなベクトル表現をエンベディングと呼びます)。例えば Open AI の [Embeddings API](https://platform.openai.com/docs/api-reference/embeddings) を使えば、様々なテキストに対して GPT-3 によるベクトル表現が得られます。そして、[最近傍探索](https://ja.wikipedia.org/wiki/%E6%9C%80%E8%BF%91%E5%82%8D%E6%8E%A2%E7%B4%A2)という技術で入力ベクトルに対して類似度が高いベクトルを探索することで次の様なことが実現できます。
+昨今ではテキスト、画像、ユーザー行動など様々なものを機械学習モデルによって意味のある多次元ベクトルとして表現[^1]できます (このようなベクトル表現を[エンベディング](https://cloud.google.com/blog/ja/topics/developers-practitioners/meet-ais-multitool-vector-embeddings?hl=ja)と呼びます)。例えば Open AI の [Embeddings API](https://platform.openai.com/docs/api-reference/embeddings) を使えば、様々なテキストに対して GPT-3 によるベクトル表現が得られます。そして、[最近傍探索](https://ja.wikipedia.org/wiki/%E6%9C%80%E8%BF%91%E5%82%8D%E6%8E%A2%E7%B4%A2)で入力ベクトルに対して類似度が高いベクトルを探索することで次の様なことが実現できます。
 
 * レコメンデーション
 * 広告ターゲティング
 * テキスト検索
 * 類似画像検索
 * チャットボット・Q&A システムの実装
-* 生成 AI との連携 (プロンプト エンジニアリングへの応用)
+* プロンプト エンジニアリングへの組み込み
 
-[^1]: [AI のマルチツールのご紹介: ベクトル エンベディング | Google Cloud 公式ブログ](https://cloud.google.com/blog/ja/topics/developers-practitioners/meet-ais-multitool-vector-embeddings?hl=ja)
-[^2]: それぞれのベクトル単体は原点からの点として表現できる。
+次の図は本の検索を単語のマッチングではなくエンベディングの最近傍探索を使って実現しています。
 
-次の図は本の検索を単語のマッチングではなくエンベディングの最近傍探索を使って実現しています。Step 1 では、目的を達成するために必要なディープ ラーニング モデルを学習しています (ここではデータベースにある本をベクトル化するモデル、検索クエリ文字列をベクトル化するモデルの 2 種類)。Step 2 で、学習したモデルを使ってデータベースに存在する本のエンベディングを生成しています。Step 3 は実際に検索しています。検索クエリの文字列をエンベディングとして表現して、そのエンベディングに近い本を最近傍探索によって探しています。このようにすることで、単純に単語のマッチングで検索するだけでは検索できないような、意味的に近い本などを検索できます。
+* Step 1: 目的の達成に必要なニューラル ネットワーク モデル ([Two-Tower モデル](https://cloud.google.com/vertex-ai/docs/matching-engine/train-embeddings-two-tower?hl=ja)) を学習
+* Step 2: 学習したモデルを使ってデータベースに存在する本のエンベディングを生成
+* Step 3: 実際に検索しています。検索クエリの文字列をエンベディングとして表現して、そのエンベディングに近い本を最近傍探索によって探索
+
+このようにすることで、単純に単語のマッチングで検索するだけでは検索できないような意味的に近い本などを検索できます。
 
 ![Embedding](/images/articles/getting-started-matching-engine/ScaNN_tom_export.gif)
 
 ## Vertex AI Matching Engine とは
 
-Vertex AI Matching Engine はフルマネージドな近似最近傍探索 (ANN) を提供するサービスです。
+Vertex AI Matching Engine は[フルマネージドな近似最近傍探索 (ANN: Approximate Nearest Neighbor)](https://cloud.google.com/vertex-ai/docs/matching-engine/ann-service-overview?hl=ja) を提供するサービスです。
 
-近似最近傍探索とは最近傍探索問題の近似的な答えを高速に求める方法です。最近傍探索は次元数とベクトル数に比例して計算量が増加するため、データ量が増えると非常に時間がかかります。そこで、多くのアプリケーションではある程度の厳密さを犠牲にして高速に近似解を求める ANN が使われます。このように、最近傍探索問題では精度と速度のトレードオフがあります。
+近似最近傍探索とは最近傍探索問題の近似的な答えを高速に求める方法です。最近傍探索は次元数とベクトル数に比例して計算量が増加するため、多数のデータがあると非常に時間がかかります。そこで、多くのアプリケーションではある程度の厳密さを犠牲にして高速に近似解を求める ANN が使われます。このように、最近傍探索問題では精度と速度のトレードオフがあります。
 
-Matching Engine では Google Research が開発した ANN 手法 [^3] を利用して、高速で精度の高い ANN を実現します。[公式ドキュメント](https://cloud.google.com/vertex-ai/docs/matching-engine/ann-service-overview?hl=ja#why_does_ann_perform_approximate_matches_instead_of_exact_matches)には次のような記述があります。
+Matching Engine では [Google Research が開発した ANN 手法](https://ai.googleblog.com/2020/07/announcing-scann-efficient-vector.html) を利用して、高速で精度の高い ANN を実現します。[公式ドキュメント](https://cloud.google.com/vertex-ai/docs/matching-engine/ann-service-overview?hl=ja#why_does_ann_perform_approximate_matches_instead_of_exact_matches)には次のような記述があります。
 
 > 再現率は、システムによって返される真の最近傍の割合を測定するために使用される指標です。Google 社内のチームによる実証的な統計によると、多くの実世界のアプリケーションにおいて、Vertex AI Matching Engine は 95～98% の再現率を達成し、10ms 以下で 90 パーセンタイルのレイテンシで結果を提供できることがわかっています（Google Cloud 社内調査、2021 年 5 月）。
 
@@ -68,8 +70,6 @@ Matching Engine では Google Research が開発した ANN 手法 [^3] を利用
 * 数千次元のベクトルをサポート
 * オートスケーリング
 * 検索結果のフィルタリング
-
-[^3]: [Announcing ScaNN: Efficient Vector Similarity Search – Google AI Blog](https://ai.googleblog.com/2020/07/announcing-scann-efficient-vector.html)
 
 ## Vertex AI Matching Engine を使ってみる
 
@@ -89,12 +89,10 @@ Matching Engine では Google Research が開発した ANN 手法 [^3] を利用
 
 Matching Engine には 2 種類のリソースがあります。
 
-![Resources](/images/articles/getting-started-matching-engine/resources.png)
+* **[Indexes](https://cloud.google.com/vertex-ai/docs/reference/rest/v1/projects.locations.indexes)**: ANN を実現するためのデータ構造でベクトル表現を保存するインデックスです。エンベディングのデータベースだと考えることもできます
+* **[IndexEndpoints](https://cloud.google.com/vertex-ai/docs/reference/rest/v1/projects.locations.indexEndpoints)**: ANN サービスを提供するエンドポイントです。構築した Index を IndexEndpoint にデプロイすることでクエリを実行できるようになります
 
-* **[Indexes](https://cloud.google.com/vertex-ai/docs/reference/rest/v1/projects.locations.indexes)**: ANN を実現するためのデータ構造でベクトル表現を保存するインデックスです。エンベディングのデータベースだと考えることもできます。IndexEndpoint にデプロイすることで、そのインデックスに対して ANN のクエリを実行できるようになります。
-* **[IndexEndpoints](https://cloud.google.com/vertex-ai/docs/reference/rest/v1/projects.locations.indexEndpoints)**: ANN サービスを提供するエンドポイントです。構築した Index を IndexEndpoint にデプロイすることで、クエリを実行できるようになります。
-
-これらに加えて、[DeployedIndex](https://cloud.google.com/vertex-ai/docs/reference/rest/v1/projects.locations.indexEndpoints#DeployedIndex) という重要な概念があります。IndexEndpoint にデプロイされた Index を表す概念です。REST のリソースではないのですが、クエリ実行時に必要だったり、オートスケールなどをこの概念と紐付けて設定したりすることになります。
+これらに加えて [DeployedIndex](https://cloud.google.com/vertex-ai/docs/reference/rest/v1/projects.locations.indexEndpoints#DeployedIndex) という概念があります。IndexEndpoint にデプロイされた Index を表す概念です。REST のリソースではないのですが、クエリ実行時に必要だったり、オートスケールなどをこの概念と紐付けて設定したりすることになります。
 
 また、Index に登録されるひとつひとつのアイテムを [IndexDatapoint](https://cloud.google.com/vertex-ai/docs/reference/rest/v1/projects.locations.indexes/upsertDatapoints#IndexDatapoint) と言います。IndexDatapoint には、その IndexDatapoint を示す一意な ID やその IndexDatapoint を表すエンベディング (float の配列) を持ちます。
 
@@ -152,12 +150,12 @@ Index は次のような項目を設定して作成します。
 
 #### 初期登録データ
 
-Index 作成時には初期データとなる IndexDatapoint 群が必要になります。これらは、[Cloud Storage](https://cloud.google.com/storage?hl=ja) にファイル群としてアップロードして、Index 作成のリクエストにそのルートディレクトリを指定します。ファイル群は次の[決まり](https://cloud.google.com/vertex-ai/docs/matching-engine/match-eng-setup/format-structure)に従って指定したルートディレクトリに配置する必要があります。
+Index 作成時には初期データとなる IndexDatapoint 群が必要になります。これらは、[Cloud Storage](https://cloud.google.com/storage?hl=ja) にファイル群としてアップロードして、Index 作成時にそのルートディレクトリを指定します。ファイル群は次の[決まり](https://cloud.google.com/vertex-ai/docs/matching-engine/match-eng-setup/format-structure)に従って、指定したルートディレクトリに配置する必要があります。
 
 * フォーマットは CSV、JSON、Avro のいずれかで、それぞれ `.csv`、`.json`、`.avro` の拡張子を持つ
 * それぞれのファイルはルートディレクトリ直下にある
 
-例えば `gs://my-embeddings/dog_image_embeddings` という Cloud Storage のパスをルートディレクトリとして指定したとき、次のようになります。
+例えば `gs://my-embeddings/dog_image_embeddings` という Cloud Storage のパスをルートディレクトリとして指定したとき、それぞれのファイルは次のように配置します。
 
 ```
 gs://my-embeddings/dog_image_embeddings
@@ -167,7 +165,7 @@ gs://my-embeddings/dog_image_embeddings
 └── shiba.json
 ```
 
-それぞれのファイルは、例えば JSON であれば次のような形になります[^4]。`id` は UTF-8 文字列でそのアイテムの一意 ID です。`embedding` はそのアイテムを表すベクトル表現で float の配列です。
+それぞれのファイルは、例えば JSON であれば次のような形になります。1 行が 1 IndexDatapoint で、`id` は UTF-8 文字列でその IndexDatapoint を示す一意 ID です。`embedding` はその IndexDatapoint を表すベクトル表現で float の配列です。他のフォーマットについては[ドキュメント](https://cloud.google.com/vertex-ai/docs/matching-engine/match-eng-setup/format-structure#data-file-formats)を参照してください。
 
 ```json:shiba.json
 {id: "ルビー", embedding: [0.05, 0.3, ..., 0.15]}
@@ -175,12 +173,7 @@ gs://my-embeddings/dog_image_embeddings
 ...
 ```
 
-[^4]: 他のフォーマットについてはドキュメントを参照してください。[Input data format and structure  |  Vertex AI  |  Google Cloud](https://cloud.google.com/vertex-ai/docs/matching-engine/match-eng-setup/format-structure#data-file-formats)
-
-`id` と `embedding` に加えて、名前空間によって検索結果をフィルタリングしたり[^5]、多様性のために検索結果において同じタグを持つアイテムの数を絞ったり[^6]するための情報を与えることもできます。本記事では割愛します。
-
-[^5]: [ベクトル一致をフィルタする  |  Vertex AI  |  Google Cloud](https://cloud.google.com/vertex-ai/docs/matching-engine/filtering?hl=ja#json)
-[^6]: [per_crowding_attribute_num_neighbors](https://github.com/googleapis/python-aiplatform/blob/b989dbbeb7dbb502a935e7dcf4eed3aff30fe0f6/google/cloud/aiplatform/matching_engine/_protos/match_service.proto#L45-L50)
+`id` と `embedding` に加えて、[名前空間によって検索結果をフィルタリング](https://cloud.google.com/vertex-ai/docs/matching-engine/filtering?hl=ja#json)したり、[多様性のために検索結果において同じタグを持つアイテムの数を絞ったり](https://github.com/googleapis/python-aiplatform/blob/b989dbbeb7dbb502a935e7dcf4eed3aff30fe0f6/google/cloud/aiplatform/matching_engine/_protos/match_service.proto#L45-L50)するための情報を与えることもできます。本記事では割愛します。
 
 #### 更新方法
 
@@ -188,14 +181,15 @@ Index にはバッチ更新とストリーム更新の 2 種類があります�
 
 * [バッチ更新](https://cloud.google.com/vertex-ai/docs/matching-engine/update-rebuild-index#update_index_content_with_batch_updates)
   * IndexDatapoint の追加・更新・削除をバッチで行う
-  * 対象 IndexDatapoint は作成時と同じように Cloud Storage 上にファイルとしてアップロード
+  * 対象 IndexDatapoin は初期登録データと同じように Cloud Storage 上にファイルとしてアップロード
   * Index への更新が終わると自動で DeployedIndex にも反映
   * 更新が結果に反映されるまである程度時間がかかる
 * [ストリーム更新](https://cloud.google.com/vertex-ai/docs/matching-engine/update-rebuild-index#update_an_index_using_streaming_updates)
-  * アイテムの追加・更新・削除を直接 DeployedIndex のメモリに反映
+  * IndexDatapoint の追加・更新・削除をリアルタイムに行う
+  * 追加・更新・削除を直接 DeployedIndex のメモリに反映
   * 更新は数秒で結果に反映
 
-本記事ではリアルタイムでの更新が可能なストリーム更新の Index を扱います。
+本記事ではリアルタイムで更新が可能なストリーム更新の Index を扱います。
 
 #### シャードサイズ
 
@@ -215,9 +209,9 @@ Index のシャードサイズです。`SMALL`、`MEDIUM`、`LARGE` から選択
 
 #### 初期登録データを作成する
 
-Index を作成する前に初期登録データを用意します。本記事では画像のサンプルデータを [EfficientNet](https://www.tensorflow.org/api_docs/python/tf/keras/applications/efficientnet/EfficientNetB0) というモデルでエンベディングを生成して Cloud Storage にアップロードします。サンプルデータには [CC-BY-2.0](https://creativecommons.org/licenses/by/2.0/) で配布されている花の画像を使います。`gs://cloud-samples-data/ai-platform/flowers/` に保存されています。
+Index を作成する前に初期登録データを用意します。本記事では画像を [EfficientNetB0](https://www.tensorflow.org/api_docs/python/tf/keras/applications/efficientnet/EfficientNetB0) というモデルでエンベディングを生成して Cloud Storage にアップロードします。サンプルデータには [CC-BY-2.0](https://creativecommons.org/licenses/by/2.0/) で配布されている花の写真を使います。このサンプルデータは Cloud Storage の `gs://cloud-samples-data/ai-platform/flowers/` に保存されています。
 
-次の Python プログラムを作成してください。
+次の Python プログラムを作成してください。このプログラムは指定した種類の花の画像すべてのエンベディングを生成して指定した Cloud Storage のパスにアップロードします。
 
 ```python:generate_and_upload_embeddings.py
 import json
@@ -290,23 +284,25 @@ if __name__ == "__main__":
         generate_and_upload_embeddings(sys.argv[1], sys.argv[2])
 ```
 
-この Python コードは、指定した種類の花の画像すべてのエンベディングを生成して、指定した Cloud Storage パスにアップロードします。次のように実行してください。
+次のように実行して、デイジーと薔薇の画像の初期登録データを作成してください。
 
 ```bash
-python generate_and_upload_embeddings.py daisy "gs://$(gcloud config get project)-embeddings"
-python generate_and_upload_embeddings.py roses "gs://$(gcloud config get project)-embeddings"
+python generate_and_upload_embeddings.py daisy "gs://$(gcloud config get project)-embeddings/"
+python generate_and_upload_embeddings.py roses "gs://$(gcloud config get project)-embeddings/"
 ```
 
 #### Index を作成する
 
-では実際に Index を作成してみましょう。本記事ではストリーム更新の Index を作成します。まずは Index の設定を JSON ファイルとして作成します。YOUR-PROJECT は自分のプロジェクト ID に置き換えてください。
+ストリーム更新の Index を作成します。現在 gcloud コマンドではストリーム更新の Index を作成できないため curl コマンドで直接 Index 作成の API をコールします。
+
+API のリクエストボディとなる JSON をファイルとして作成します。YOUR-PROJECT は自分のプロジェクト ID に置き換えてください。
 
 
 ```json:index_metadata.json
 {
   "display_name": "Search index for flower images",
   "metadata": {
-    "contentsDeltaUri": "gs://YOUR-PROJECT-embeddings",
+    "contentsDeltaUri": "gs://YOUR-PROJECT-embeddings/",
     "config": {
       "dimensions": 1280,
       "approximateNeighborsCount": 100,
@@ -318,9 +314,9 @@ python generate_and_upload_embeddings.py roses "gs://$(gcloud config get project
 }
 ```
 
-それぞれの設定項目についてはドキュメントの[スキーマ](https://cloud.google.com/vertex-ai/docs/matching-engine/create-manage-index#index-metadata-file) を参照してください。
+`metadata.contentsDeltaUri` が初期登録データのルートディレクトリ、`metadata.config.dimensions` がエンベディングの次元数、`shardSize` がシャードサイズです。その他の設定項目についてはドキュメントの[スキーマ](https://cloud.google.com/vertex-ai/docs/matching-engine/create-manage-index#index-metadata-file) を参照してください。
 
-現在 gcloud コマンドでストリーム更新の Index を作成できないため、curl で直接 API をコールします。
+curl コマンドを実行します。
 
 ```bash
 curl -X POST \
@@ -330,7 +326,7 @@ curl -X POST \
   -d @index_metadata.json
 ```
 
-Index の作成には 1 時間程度かかります。作成ジョブの状態は[コンソール](https://console.cloud.google.com/vertex-ai/matching-engine/indexes)や `gcloud ai operations describe` コマンドで確認できます。気長に待ちましょう。作成が終わると次のようになります。
+Index の作成には 1 時間程度かかります。作成ジョブの状態は[コンソール](https://console.cloud.google.com/vertex-ai/matching-engine/indexes)や `gcloud ai operations describe` コマンドで確認できます。作成が終わると次のように表示されます。
 
 ![complete_index_creation_job](/images/articles/getting-started-matching-engine/complete_index_creation_job.png)
 
