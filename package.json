@@ -18,6 +18,6 @@
     "textlint": "12.1.0",
     "textlint-rule-preset-ja-spacing": "2.2.0",
     "textlint-rule-preset-ja-technical-writing": "7.0.0",
-    "zenn-cli": "0.1.105"
+    "zenn-cli": "0.1.143"
   }
 }
