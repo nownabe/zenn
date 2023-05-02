@@ -20,17 +20,6 @@ published: false
 
 https://github.com/googlecloudplatform/matching-engine-tutorial-for-image-search
 
-## 実行環境
-
-後半では実際に Matching Engine を構築して利用する手順を記載しています。実行環境として次の環境で動作確認しています。
-
-* Python 3.11.3
-* [gcloud](https://cloud.google.com/sdk/docs/install?hl=ja) 426.0.0
-
-また、手順を実行するには Google Cloud のアカウントとプロジェクトが必要です。
-
-https://cloud.google.com/docs/get-started?hl=ja
-
 ## ベクトル検索で何ができるの？
 
 昨今ではテキスト、画像、ユーザー行動など様々なものを機械学習モデルによって意味のある多次元ベクトルとして表現[^1]できます (このようなベクトル表現を[エンベディング](https://cloud.google.com/blog/ja/topics/developers-practitioners/meet-ais-multitool-vector-embeddings?hl=ja)と呼びます)。例えば Open AI の [Embeddings API](https://platform.openai.com/docs/api-reference/embeddings) を使えば、様々なテキストに対して GPT-3 によるベクトル表現が得られます。そして、[最近傍探索](https://ja.wikipedia.org/wiki/%E6%9C%80%E8%BF%91%E5%82%8D%E6%8E%A2%E7%B4%A2)で入力ベクトルに対して類似度が高いベクトルを探索することで次の様なことが実現できます。
@@ -51,6 +40,10 @@ https://cloud.google.com/docs/get-started?hl=ja
 このようにすることで、単純に単語のマッチングで検索するだけでは検索できないような意味的に近い本などを検索できます。
 
 ![Embedding](/images/articles/getting-started-matching-engine/ScaNN_tom_export.gif)
+
+ベクトル検索やエンベディングについてはこちらの YouTube 動画がわかりやすいのでぜひ見てみてください。
+
+https://youtu.be/GJ1PeWEKg_I
 
 ## Vertex AI Matching Engine とは
 
@@ -84,6 +77,17 @@ Matching Engine では [Google Research が開発した ANN 手法](https://ai.g
 5. Index のデプロイ
 6. 検索クエリの実行
 7. Index のストリーム更新
+
+### 実行環境
+
+次の環境で動作確認しています。
+
+* Python 3.11.3
+* [gcloud](https://cloud.google.com/sdk/docs/install?hl=ja) 426.0.0
+
+また、手順を実行するには Google Cloud のアカウントとプロジェクトが必要です。
+
+https://cloud.google.com/docs/get-started?hl=ja
 
 ### Vertex AI Matching Engine のリソース
 
