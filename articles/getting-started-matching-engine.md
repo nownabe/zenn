@@ -352,7 +352,7 @@ IndexEndpoint には接続方法によって 3 種類あります。
 
 つまり、IndexEndpoint はデプロイしたインデックスをネットワーク的にどこから使うかを設定します。PSA と PSC の IndexEndpoint は接続した VPC からのみアクセスできるようになります。一方、public endpoint の IndexEndpoint はパブリックなエンドポイントでアクセスできるようになります。また、PSA と PSC では VPC からアクセスするため認証なしでアクセス可能ですが、public endpoint は認証が必須です。
 
-本記事ではサーバーレスとの相性が良かったり、他クラウドからも使いやすかったりする Public endpoint を使います。ただし、public endpoint は執筆時点ではまだプレビューです。
+本記事ではサーバーレスとの相性が良かったり、他クラウドからも使いやすかったりする Public endpoint を使います。ただし、public endpoint は執筆時点ではまだプレビューです。本番環境で一般提供が必要な場合は PSA の IndexEndpoint を利用してください。PSA の手順は [公式ドキュメント](https://cloud.google.com/vertex-ai/docs/matching-engine/deploy-index-vpc) や[チュートリアル](https://github.com/googlecloudplatform/matching-engine-tutorial-for-image-search) を参考にしてください。
 
 #### Public Endpoint の IndexEndpoint を作成する
 
