@@ -4,7 +4,7 @@ emoji: "🤝"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: [gcp,vertexai,matchingengine,ai]
 publication_name: google_cloud_jp
-published: false
+published: true
 ---
 
 ## はじめに
@@ -560,6 +560,10 @@ gcloud iam service-accounts keys create \
   credentials.json \
   --iam-account "query-runner@$(gcloud config get project).iam.gserviceaccount.com"
 ```
+
+:::message
+本記事では簡単のためにキーファイルをダウンロードして使いますが[セキュリティの観点からおすすめの方法ではありません](https://cloud.google.com/docs/authentication/provide-credentials-adc?hl=ja#local-key)。特に [Cloud Run](https://cloud.google.com/run/docs/securing/service-identity?hl=ja) や [GKE](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity?hl=ja) などの本番環境では各デプロイ先に[専用](https://cloud.google.com/iam/docs/best-practices-service-accounts?hl=ja#single-purpose)かつ最小権限を持つ Service Account を直接デプロイ先に割り当ててください。開発中は [Service Account を使用しないことが推奨](https://cloud.google.com/iam/docs/best-practices-service-accounts?hl=ja#development)されています。
+:::
 
 #### 類似画像検索クエリを実行する
 
