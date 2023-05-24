@@ -3,6 +3,7 @@ title: "PaLM API を使って自然言語で BigQuery にクエリしてみる"
 emoji: "🤖"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: [gcp, vertexai, llm, bigquery, generativeai]
+publication_name: google_cloud_jp
 published: true
 ---
 
