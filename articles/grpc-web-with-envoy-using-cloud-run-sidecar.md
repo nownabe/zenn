@@ -204,11 +204,69 @@ func main() {
 
 ### Envoy の設定
 
-Envoy の設定は概ね gRPC-Web の [Hello World](https://github.com/grpc/grpc-web/tree/master/net/grpc/gateway/examples/helloworld) から持ってきています。その中で不要なものを削ったり非推奨の設定を変えたりしています。全文は[こちら](https://github.com/nownabe/google-cloud-examples/blob/main/grpc-web-envoy/envoy/envoy.yaml)。
+Envoy の設定は概ね gRPC-Web の [Hello World](https://github.com/grpc/grpc-web/tree/master/net/grpc/gateway/examples/helloworld) から持ってきています。その中で特に気になった部分のみ変更しています。1 点目の変更は Deprecation の Warning が出ていた CORS の設定です。CORS 設定の内容は Hello World から変えていません。2 点目の変更は cluster の設定です。サイドカーに DNS の解決は必要ないので `type: STATIC` にしています。
 
-具体的な変更点の 1 点目は、CORS の設定です。Hello World のサンプルでは Deprecation のアラートが出ていたので変更しました。CORS 設定の内容は Hello World から変えていません。
-
-2 点目は cluster の設定です。サイドカーに DNS の解決は必要ないので `type: STATIC` にしています。
+```yaml:envoy.yaml
+static_resources:
+  listeners:
+    - name: listener_0
+      address:
+        socket_address: {address: 0.0.0.0, port_value: 8080}
+      filter_chains:
+        - filters:
+            - name: envoy.filters.network.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                codec_type: AUTO
+                stat_prefix: ingress_http
+                route_config:
+                  name: local_route
+                  virtual_hosts:
+                    - name: local_service
+                      domains: ["*"]
+                      routes:
+                        - match: {prefix: "/"}
+                          route:
+                            cluster: grpc
+                            timeout: 0s
+                            max_stream_duration:
+                              grpc_timeout_header_max: 0s
+                      typed_per_filter_config:
+                        envoy.filters.http.cors:
+                          "@type": type.googleapis.com/envoy.extensions.filters.http.cors.v3.CorsPolicy
+                          allow_origin_string_match:
+                            - prefix: "*"
+                          allow_methods: GET, PUT, DELETE, POST, OPTIONS
+                          allow_headers: keep-alive,user-agent,cache-control,content-type,content-transfer-encoding,custom-header-1,x-accept-content-transfer-encoding,x-accept-response-streaming,x-user-agent,x-grpc-web,grpc-timeout
+                          max_age: "1728000"
+                          expose_headers: custom-header-1,grpc-status,grpc-message
+                http_filters:
+                  - name: envoy.filters.http.grpc_web
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.grpc_web.v3.GrpcWeb
+                  - name: envoy.filters.http.cors
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.cors.v3.Cors
+                  - name: envoy.filters.http.router
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+  clusters:
+    - name: grpc
+      type: STATIC
+      lb_policy: ROUND_ROBIN
+      typed_extension_protocol_options:
+        envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+          "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+          explicit_http_config:
+            http2_protocol_options: {}
+      load_assignment:
+        cluster_name: grpc
+        endpoints:
+          - lb_endpoints:
+            - endpoint:
+                address:
+                  socket_address: {address: 127.0.0.1, port_value: 50051}
+```
 
 ### クライアント アプリの実装
 
