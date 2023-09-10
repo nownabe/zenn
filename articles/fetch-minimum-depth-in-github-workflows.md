@@ -3,7 +3,7 @@ title: "GitHub Actions workflows で Pull Request の差分コミットだけ fe
 emoji: "🐙"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: [GitHub]
-published: false
+published: true
 ---
 
 Pull Request の diff から何かを確認したいときや、Pull Request に含まれるコミットそれぞれをチェックしたい場合、Pull Request の base (例えば `main`) からその Pull Request の最新コミットまでを含む履歴が必要になります。このとき、リポジトリすべての履歴ではなく、必要な履歴のみを取得すると CI の高速化が可能です。
