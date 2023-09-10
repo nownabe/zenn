@@ -6,7 +6,7 @@ topics: [GitHub]
 published: false
 ---
 
-Pull Request の diff から何かを確認したいときや、Pull Request に含まれるコミットそれぞれをチェックしたい場合、Pull Request の base (例えば `main`) からその Pull Request に含まれる最新のコミットまでの履歴が必要になります。このとき、必要な履歴のみを取得するようにすれば CI を高速化できる可能性があります。
+Pull Request の diff から何かを確認したいときや、Pull Request に含まれるコミットそれぞれをチェックしたい場合、Pull Request の base (例えば `main`) からその Pull Request の最新コミットまでを含む履歴が必要になります。このとき、リポジトリすべての履歴ではなく、必要な履歴のみを取得すると CI の高速化が可能です。
 
 GitHub Actions workflows の [actions/checkout](https://github.com/actions/checkout) はデフォルトで `fetch-depth` が `1` に設定されていて最新のコミットのみを取得するようになっています。Pull Request に複数コミットが含まれる場合、これでは base との diff はとれません。`fetch-depth` を `0` に設定するとすべての履歴を取得できますが、巨大なリポジトリでは時間がかかります。
 
