@@ -13,7 +13,7 @@ GitHub Actions workflows の [actions/checkout](https://github.com/actions/check
 Pull Request でトリガーされる workflow の場合、[GitHub context](https://docs.github.com/en/actions/learn-github-actions/contexts#github-context) の `event` プロパティに [pull_requet](https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request) オブジェクトが含まれています。次のようにするとベースからの履歴のみを取得できます。
 
 ```yaml
-- run: echo "fetch_depth=$(( $commits + 1 ))" >> $GITHUB_ENV
+- run: echo "fetch_depth=$(( commits + 1 ))" >> $GITHUB_ENV
   env:
     commits: ${{ github.event.pull_request.commits }}
 - uses: actions/checkout@v4
@@ -36,7 +36,7 @@ jobs:
     steps:
 
       # fetch-depth の計算
-      - run: echo "fetch_depth=$(( $commits + 1 ))" >> $GITHUB_ENV
+      - run: echo "fetch_depth=$(( commits + 1 ))" >> $GITHUB_ENV
         env:
           commits: ${{ github.event.pull_request.commits }}
 
