@@ -4,7 +4,7 @@ emoji: "🪵"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: [gcp,googlecloud,cloudlogging,log]
 published: true
-publication: knowledgework
+publication_name: knowledgework
 ---
 
 :::message
