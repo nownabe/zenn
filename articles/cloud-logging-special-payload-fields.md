@@ -11,7 +11,7 @@ publication_name: knowledgework
 本記事は[株式会社ナレッジワーク](https://kwork.studio)の [Publication](https://zenn.dev/p/knowledgework) で公開されています。
 :::
 
-Google Cloud のログ管理サービスである [Cloud Logging](https://cloud.google.com/logging/docs/overview) は JSON で出力されたログを[構造化ログ](https://cloud.google.com/logging/docs/structured-logging?hl=ja)として認識します。その中でも、いくつかの[特別な JSON フィールド](https://cloud.google.com/logging/docs/structured-logging?hl=ja#special-payload-fields)を使ってログに特別な属性を与える事ができます。本記事ではそれらの特別な JSON フィールドを用途ごとにまとめて紹介します。
+Google Cloud のログ管理サービスである [Cloud Logging](https://cloud.google.com/logging/docs/overview) は JSON で出力されたログを[構造化ログ](https://cloud.google.com/logging/docs/structured-logging?hl=ja)として認識します。その際に[特別な JSON フィールド](https://cloud.google.com/logging/docs/structured-logging?hl=ja#special-payload-fields)を使うとログに特別な属性を与える事ができます。本記事ではそれらの特別な JSON フィールドを用途ごとにまとめて紹介します。
 
 本記事の技術的な内容はほぼすべて[このドキュメント 1 ページ](https://cloud.google.com/logging/docs/structured-logging?hl=ja)に書いてありますが、「実際に UI でどう表示されるのか」と「その特別な JSON フィールドにどんな価値があるのか」はドキュメントにないので参考にしていただけると思います。
 
