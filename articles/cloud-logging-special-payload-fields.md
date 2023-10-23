@@ -1,5 +1,5 @@
 ---
-title: "Cloud Logging 構造化ログの特殊フィールドまとめ"
+title: "Cloud Logging 構造化ログの特別な JSON フィールドまとめ"
 emoji: "🪵"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: [gcp,googlecloud,cloudlogging,log]
