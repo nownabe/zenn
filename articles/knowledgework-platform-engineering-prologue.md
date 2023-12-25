@@ -6,6 +6,8 @@ topics: [platformengineering, knowledgework]
 published: true
 publication_name: knowledgework
 ---
+本記事は[Platform Engineering Advent Calendar 2023](https://qiita.com/advent-calendar/2023/platform-engineering)の25日目の記事です。
+
 # はじめに
 
 本記事では[ナレッジワーク](https://kwork.studio/)というスタートアップの Platform Engineering について簡単に紹介します。まだまだこれから始めるという段階であり Platform Engineering が必要な背景と何をしようとしているかをお伝えします。
