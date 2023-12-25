@@ -4,6 +4,7 @@ emoji: "🦄"
 type: "idea" # tech: 技術記事 / idea: アイデア
 topics: [platformengineering, knowledgework]
 published: true
+publication_name: knowledgework
 ---
 # はじめに
 
