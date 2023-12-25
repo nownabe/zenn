@@ -3,9 +3,8 @@ title: "ナレッジワークの Platform Engineering"
 emoji: "🦄"
 type: "idea" # tech: 技術記事 / idea: アイデア
 topics: [platformengineering, knowledgework]
-published: false
+published: true
 ---
-
 # はじめに
 
 本記事では[ナレッジワーク](https://kwork.studio/)というスタートアップの Platform Engineering について簡単に紹介します。まだまだこれから始めるという段階であり Platform Engineering が必要な背景と何をしようとしているかをお伝えします。
