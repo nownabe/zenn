@@ -22,36 +22,23 @@ published: false
 * おすすめの Infra as Code の方法
 * おすすめの skaffold.yaml の書き方
 
-以下の内容は上記のような基本をおさえれば応用が効くので本記事では説明しません。
-
-* Automation
-* デプロイフック
-* カナリアデプロイなど高度なデプロイパイプライン
-* 監視
+Automation、デプロイフック、カナリアデプロイなどの高度なパイプライン、監視などは上記のような基本をおさえれば応用が効くので本記事では説明しません。
 
 本記事の想定読者は Cloud Run は使っているけど Cloud Deploy は使っていないという人です。Kubernetes の知識がなくても理解できるようにしていますが、次のような知識を前提としています。
 
-* Google Cloud
-  * gcloud CLI
-  * プロジェクト
-  * IAM
-  * Cloud Run
-  * Cloud Build
-  * Artifact Registry
+* Google Cloud (gcloud CLI, プロジェクト, IAM, Service Account, Cloud Run, Cloud Build, Cloud Storage, Artifact Registry)
 * Docker、コンテナ
 * Terraform
 
-## Disclaimer
-
-本記事ではおすすめの方法などを紹介していますが、筆者が実際に構築・運用をする中で考えたおすすめやベストプラクティスであって、Google Cloud 公式のものではありません。
-
-また、わかりやすさのため説明が厳密ではない部分があります。
+:::details Disclaimer
+本記事ではおすすめの方法などを紹介していますが、筆者が実際に構築・運用をする中で考えたおすすめやベストプラクティスであって、Google Cloud 公式のものではありません。また、わかりやすさのため説明が厳密ではない部分があります。
+:::
 
 # Cloud Deploy とは
 
 ## 概要
 
-dev → stg → prod のような、異なる環境に対する一連のデプロイパイプラインを管理・自動化するためのフルマネージドサービスです。Cloud Deploy ではそのようなパイプラインを Delivery Pipeline と呼びます。
+「開発環境 → ステージング環境 → 本番環境」のような、異なる環境に対する一連のデプロイパイプラインを管理・自動化するためのフルマネージドサービスです。Cloud Deploy ではそのようなパイプラインを Delivery Pipeline と呼びます。
 
 本記事ではこれ以上の概要は割愛しますが、 Cloud Deploy で何ができるのか、何が嬉しいのかを把握するには以下の記事がおすすめです。
 
@@ -255,36 +242,462 @@ Cloud Deploy を使った dev → stg → prd というデプロイパイプラ�
 
 
 ![flow](/images/articles/cloud-deploy-for-cloud-run/flow.png)
+*デプロイの流れ全体像*
 
-## Delivery Pipeline を構築する
+# Delivery Pipeline を構築する
 
-ここから、実際に Delivery Pipeline を構築する流れで Cloud Deploy の仕組みやおすすめの構築方法を説明していきます。`hello-app` という Cloud Run service アプリのデプロイパイプライン構築を考えます。
+ここからは `hello-app` という Cloud Run service アプリの dev → stg → prd というデプロイパイプライン構築を通して Cloud Deploy の仕組み、おすすめの構築方法、おすすめの設計を説明していきます。
 
-### プロジェクト構成
+サンプルの Terraform コードは省略して書いてあるためそのままコピペしても動きません。[サンプルコード](https://github.com/nownabe/google-cloud-examples/tree/main/cloud-deploy/serial)からコピーするようにしてください。
 
-### 権限設計
+## プロジェクト構成
 
-## Delivery Pipeline を運用する
+Google Cloud では環境ごとにプロジェクトを分けることがベストプラクティスです。では Delivery Pipeline などデプロイ用のリソースをどこに置けばいいかというと、サービス用のプロジェクトとは別にパイプライン用のプロジェクトを作成するのがおすすめです。
+
+![projects](/images/articles/cloud-deploy-for-cloud-run/projects.png)
+
+## 権限設計
+
+Delivery Pipeline 周辺にどのような登場人物 (Google Cloud 用語で [Principal](https://cloud.google.com/iam/docs/overview#concepts_related_identity)) がいて、それぞれ何ができればよいかを考えます。
+
+### Principals
+
+まずはどのような Principal がいるのかを見ていきます。下図は登場する Principal をまとめたものです。
+
+![principals](/images/articles/cloud-deploy-for-cloud-run/principals.png)
+
+それぞれ簡単に説明します。
+
+* **image builder**: コンテナイメージをビルド・プッシュする人。`skaffold build` を実行する
+* **releaser**: Release を作成する人。`gcloud deploy releases create` を実行する
+* **xxx promoter**: 各環境への Rollout を作成する人。`gcloud deploy releases promote` を実行する
+* **Cloud Build の Service Account**: 各 Target に関する Cloud Build の Service Account。`skaffold render` や `skaffold apply` を実行する
+* **Cloud Run service の Service Account**: 各 Cloud Run service の Service Account
+
+細かく考えると上記のような Principals がありますが今回は次のようにします。
+
+* releaser に image builder と dev promoter を含める
+  * 多くの場合、コンテナイメージのビルド・プッシュから dev 環境へのデプロイは自動化して同時に実施することが多いため
+* Cloud Run の Service Account は考えない
+  * Delivery Pipeline 周辺においては Principal として登場しないため
+
+![principals2](/images/articles/cloud-deploy-for-cloud-run/principals2.png)
 
 
-## Cloud Deploy のリソース
+### releaser の権限
 
-## Skaffold とは
+releaser は次の処理を行います。また、各処理に必要な role または permission を併記します。
 
+* `skaffold build`
+  * コンテナイメージをビルド
+  * コンテナイメージをプッシュ (Artifact Registry repository への `roles/artifactregistry.writer`)
+* `gcloud deploy releases create`
+  * Release の作成 (Delivery Pipeline への `clouddeploy.releases.create`)
+    * `source.tgz` を Cloud Storage へアップロード (Cloud Storage bucket への `roles/storage.objectCreator`, `roles/storage.legacyBucketReader`)
+    * 各 Target に対して `skaffold render` を実行するための Cloud Build の起動 (各 Target に設定された Service Account への `roles/iam.serviceAccountUser`)
+  * dev に対する Rollout の作成 (Delivery Pipeline への条件付き `roles/clouddeploy.releaser`)
+    * dev Target に対して `skaffold apply` を実行するための Cloud Build の起動 (dev Target に設定された Service Account への `roles/iam.serviceAccountUser`)
+  * 非同期処理 ([Operations](https://cloud.google.com/deploy/docs/api/reference/rest/v1/projects.locations.operations)) の取得 (pipeline プロジェクトへの `roles/clouddeploy.viewer`)
 
-# Cloud Run のデプロイを実装する
+:::details releaser に必要な権限の補足
+Rollout を作成するときに各 Target に対する読み取り権限も必要になりますが、Operation を取得するためにプロジェクトに `roles/clouddeploy.viewer` をつける必要があり、それで全 Target を読み取りできるようになるので省略しています。
+:::
 
-## 準備
+releaser の処理は自動化され、ソースコードの変更をトリガーに起動する GitHub Workflow や Cloud Build が実態となるケースが多いので、それに対応する Service Account にこれらの権限を付与することになるでしょう。
 
-`gcloud components update skaffold`
+Terraform で権限を設定すると次のようになります。
 
-## 実践的なアーキテクチャ
+```tf
+resource "google_service_account" "hello-app-releaser" {
+  project    = google_project.pipeline.project_id
+  account_id = "hello-app-releaser"
+}
 
+resource "google_artifact_registry_repository_iam_member" "hello-app-deployer" {
+  project    = google_artifact_registry_repository.hello-app.project
+  location   = google_artifact_registry_repository.hello-app.location
+  repository = google_artifact_registry_repository.hello-app.name
+  role       = "roles/artifactregistry.writer"
+  member     = "serviceAccount:${google_service_account.hello-app-releaser.email}"
+}
 
-## Cloud Run service の箱を用意する
+resource "google_storage_bucket_iam_member" "objectCreator" {
+  bucket = google_storage_bucket.storage.name
+  role   = "roles/storage.objectCreator"
+  member = "serviceAccount:${google_service_account.hello-app-releaser.email}"
+}
 
-## skaffold.yaml を作成する
+resource "google_storage_bucket_iam_member" "legacyBucketReader" {
+  bucket = google_storage_bucket.storage.name
+  role   = "roles/storage.legacyBucketReader"
+  member = "serviceAccount:${google_service_account.hello-app-releaser.email}"
+}
 
-* Docker イメージ名の設定
-* Docker イメージタグの命名方法の設定
-* Cloud Run Service 定義 YAML の場所の指定
+resource "google_service_account_iam_member" "serviceAccountUser" {
+  for_each = ["dev", "stg", "prd"]
+
+  service_account_id = google_service_account.hello-app-target[each.key].name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${google_service_account.hello-app-releaser.email}"
+}
+
+resource "google_project_iam_custom_role" "clouddeployReleaseCreator" {
+  project     = google_project.pipeline.project_id
+  role_id     = "clouddeployReleaseCreator"
+  title       = "Cloud Deploy Release Creator"
+  permissions = ["clouddeploy.releases.create"]
+}
+
+data "google_iam_policy" "hello-app-pipeline-policy" {
+  binding {
+    role    = google_project_iam_custom_role.clouddeployReleaseCreator.id
+    members = ["serviceAccount:${google_service_account.hello-app-releaser.email}"]
+  }
+
+  binding {
+    role    = "roles/clouddeploy.releaser"
+    members = ["serviceAccount:${google_service_account.hello-app-releaser.email}"]
+    condition {
+      title      = "Rollout to hello-app-dev"
+      expression = "api.getAttribute(\"clouddeploy.googleapis.com/rolloutTarget\", \"\") == \"${google_clouddeploy_target.hello-app-target["dev"].name}\""
+    }
+  }
+
+  // ...
+}
+
+resource "google_clouddeploy_delivery_pipeline_iam_policy" "policy" {
+  project     = google_clouddeploy_delivery_pipeline.hello-app-pipeline.project
+  location    = google_clouddeploy_delivery_pipeline.hello-app-pipeline.location
+  name        = google_clouddeploy_delivery_pipeline.hello-app-pipeline.name
+  policy_data = data.google_iam_policy.hello-app-pipeline-policy.policy_data
+}
+
+resource "google_project_iam_member" "hello-app-deployer_clouddeploy_viewer" {
+  project = google_project.pipeline.project_id
+  role    = "roles/clouddeploy.viewer"
+  member  = "serviceAccount:${google_service_account.hello-app-releaser.email}"
+}
+```
+
+:::details releaser の権限設定の補足
+Terraform を見ると releaser に対する権限設定が複雑なことがわかります。これは、releaser が stg や prd にデプロイできないようにするために必要な設定です。Delivery Pipeline に Release を作成するための role として `roles/clouddeploy.releaser` がありますが、これには Rollout を作成する permission も含まれているため、Delivery Pipeline に対して条件なしで付与するとすべての Target へのデプロイができるようになってしまいます。そのため、Release を作成するためだけの custom role を作成しています。また、`roles/clouddeploy.releaser` は dev 環境に対してのみ有効化されるような条件を設定しています。
+:::
+
+### Cloud Build の Service Account
+
+Delivery Pipeline から起動される Cloud Build にアタッチされる Service Account は、その Cloud Build がどの Target に関するものかで決まります。例えば dev Target に関する Cloud Build の Service Account を設定する Terraform は次のようになります。
+
+```tf
+resource "google_service_account" "hello-app-target-dev" {
+  project    = google_project.pipeline.project_id
+  account_id = "hello-app-target-dev"
+}
+
+resource "google_clouddeploy_target" "hello-app-target-dev" {
+  project          = google_project.pipeline.project_id
+  location         = "us-west1"
+  name             = "hello-app-dev"
+  execution_configs {
+    service_account = google_service_account.hello-app-target-dev.email
+  }
+  run {
+    location = "projects/hello-app-dev/locations/us-west1"
+  }
+}
+```
+
+一つの Target に対して Cloud Build は 2 回、Release 作成時と Rollout 作成時にそれぞれ起動されます。それぞれで実行する処理と必要な権限は次のようになります。
+
+* `skaffold render` (Release 作成時に起動される)
+  * `source.tgz` を Cloud Storage からダウンロード (Cloud Storage bucket への `roles/storage.objectViewer`)
+  * `manifest.json` を Cloud Storage へアップロード (Cloud Storage bucket への `roles/storage.objectCreator`)
+* `skaffold apply` (Rollout 作成時に起動される)
+  * `manifest.json` を Cloud Storage からダウンロード (Cloud Storage bucket への `roles/storage.objectViewer`)
+  * Cloud Run service をデプロイ (Cloud Run service への `roles/run.developer`、Cloud Run service の Service Account への `roles/iam.serviceAccountUser`)
+
+また、Cloud Build を実行する基本的な role として `roles/logging.logWriter` が必要です。
+
+Terraform で dev Target に関する Cloud Build の Service Account に必要な権限を設定すると次のようになります。(stg, prd も同様)
+
+```tf
+resource "google_service_account" "hello-app-target-dev" {
+  project    = google_project.pipeline.project_id
+  account_id = "hello-app-target-dev"
+}
+
+resource "google_project_iam_member" "logWriter" {
+  project = google_project.pipeline.project_id
+  role    = "roles/logging.logWriter"
+  member  = "serviceAccount:${google_service_account.hello-app-target-dev.email}"
+}
+
+resource "google_storage_bucket_iam_member" "objectViewer" {
+  bucket = google_storage_bucket.storage.name
+  role   = "roles/storage.objectViewer"
+  member = "serviceAccount:${google_service_account.hello-app-target-dev.email}"
+}
+
+resource "google_storage_bucket_iam_member" "objectCreator" {
+  bucket = google_storage_bucket.storage.name
+  role   = "roles/storage.objectCreator"
+  member = "serviceAccount:${google_service_account.hello-app-target-dev.email}"
+}
+
+resource "google_service_account_iam_member" "serviceAccountUser" {
+  service_account_id = google_service_account.hello-app-dev.name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${google_service_account.hello-app-target-dev.email}"
+}
+
+resource "google_cloud_run_v2_service_iam_member" "hello-app-target_run_developer" {
+  project  = google_cloud_run_v2_service.hello-app-dev.project
+  location = google_cloud_run_v2_service.hello-app-dev.location
+  name     = google_cloud_run_v2_service.hello-app-dev.name
+  role     = "roles/run.developer"
+  member   = "serviceAccount:${google_service_account.hello-app-target-dev.email}"
+}
+```
+
+:::details Cloud Build の Service Account の権限についての補足
+Cloud Deploy のデフォルトの設定では `source.tgz` を格納する Cloud Storage bucket と `manifest.json` を格納する Cloud Storage bucket は別の bucket を使うようになっています。そのため、権限設定も 2 つのバケットに対して必要になります。実用上同じ bucket で問題ない場合は同じにしておくのがおすすめです。
+:::
+
+### stg promoter と prd promoter
+
+stg promoter と prd promoter は releaser のサブセットと捉えることができます。stg promoter は次の処理を行います (prd promoter も同様)。
+
+* `gcloud deploy releases promote`
+  * stg に対する Rollout の作成 (Delivery Pipeline への条件付き `roles/clouddeploy.releaser`)
+    * stg Target に対して `skaffold apply` を実行するための Cloud Build の起動 (stg Target に設定された Service Account への `roles/iam.serviceAccountUser`)
+  * 非同期処理 ([Operations](https://cloud.google.com/deploy/docs/api/reference/rest/v1/projects.locations.operations)) の取得 (pipeline プロジェクトへの `roles/clouddeploy.viewer`)
+
+promoter は releaser と違って SRE などの人となることも多いです。もしくは人かなんらかイベントがトリガーする自動化システムになるでしょう。
+
+stg promoter を Service Account として実装する場合の権限設定 Terraform は次のようになります (prd promoter も同様)。
+
+```tf
+resource "google_service_account" "hello-app-stg-promoter" {
+  project    = google_project.pipeline.project_id
+  account_id = "hello-app-stg-promoter"
+}
+
+resource "google_service_account_iam_member" "serviceAccountUser" {
+  service_account_id = google_service_account.hello-app-target["stg"].name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${google_service_account.hello-app-stg-promoter.email}"
+}
+
+data "google_iam_policy" "hello-app-policy" {
+  // ...
+
+  binding {
+    role    = "roles/clouddeploy.releaser"
+    members = ["serviceAccount:${google_service_account.hello-app-stg-promoter.email}"]
+    condition {
+      title      = "Rollout to hello-app-stg"
+      expression = "api.getAttribute(\"clouddeploy.googleapis.com/rolloutTarget\", \"\") == \"${google_clouddeploy_target.hello-app-stg.name}\""
+    }
+  }
+
+  // ...
+}
+
+resource "google_clouddeploy_delivery_pipeline_iam_policy" "policy" {
+  project     = google_clouddeploy_delivery_pipeline.hello-app.project
+  location    = google_clouddeploy_delivery_pipeline.hello-app.location
+  name        = google_clouddeploy_delivery_pipeline.hello-app.name
+  policy_data = data.google_iam_policy.hello-app-policy.policy_data
+}
+
+resource "google_project_iam_member" "clouddeploy_viewer" {
+  project = google_project.pipeline.project_id
+  role    = "roles/clouddeploy.viewer"
+  member  = "serviceAccount:${google_service_account.hello-app-stg-promoter.email}",
+}
+```
+
+## Delivery Pipeline 構築
+
+Cloud Deploy に関する公式ドキュメントや記事には [Delivery Pipeline を YAML で定義する](https://cloud.google.com/deploy/docs/config-files)ように書かれているものが多いですが、まったくその必要はありません。いつも通りの方法、例えば Terraform で管理しましょう。
+
+Terraform の場合 [google_clouddeploy_delivery_pipeline](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/clouddeploy_delivery_pipeline) リソースを使って以下のように定義します。
+
+```tf
+resource "google_clouddeploy_delivery_pipeline" "hello-app-pipeline" {
+  location = "us-west1"
+  name     = "hello-app-pipeline"
+  serial_pipeline {
+    stages { target_id = google_clouddeploy_target.hello-app-dev.name }
+    stages { target_id = google_clouddeploy_target.hello-app-stg.name }
+    stages { target_id = google_clouddeploy_target.hello-app-prd.name }
+  }
+}
+```
+
+`location` は、デプロイ先の location とは無関係です。
+
+多くのドキュメントやサンプルで、各ステージに `profiles` というものを設定していますが、これは不要です。むしろ、特に Cloud Run の場合、使わないようにしたほうがシンプルでわかりやすく構成できます。
+
+## manifest.yaml
+
+`manifest.yaml` は [Cloud Run service YAML](https://cloud.google.com/run/docs/reference/yaml/v1#service) のことです。普段 Cloud Run を使うだけであればこの YAML は必要ないのですが、Cloud Deploy を使う場合は必要になります。
+
+現在 Cloud Run を使っているのであれば、この YAML はコンソールからも確認できますし、次のコマンドで確認することもできます。コピペして[リファレンス](https://cloud.google.com/run/docs/reference/yaml/v1#service)と見比べながら不必要なものを削除していくのがいいでしょう。
+
+```shell
+gcloud run services describe hello-app \
+  --region us-central1 \
+  --format yaml
+```
+
+`manifest.yaml` は Cloud Run service アプリに対して 1 つあればよく (dev、stg、prd それぞれ別のものを作る必要はない)、最小の `manifest.yaml` は次のようになります。
+
+```yaml
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: hello-app
+  annotations:
+    run.googleapis.com/ingress: all
+spec:
+  template:
+    spec:
+      serviceAccountName: dummy # from-param: ${service_account_name}
+      containers:
+        - name: hello-app
+          image: hello-app
+          env:
+            - name: MESSAGE
+              value: dummy # from-param: ${message}
+```
+
+ここで、`# from-param: ${service_account_name}` のようなコメントがついているフィールドがありますが、**このコメントには意味があります**。この `# from-param:` によって設定されたパラメータは [deploy parameters](https://cloud.google.com/deploy/docs/parameters) と呼ばれます。deploy parameters は Target ごとに設定できるため、環境ごとに変化する値を使いたい場合は deploy parameters を利用します。
+
+例えば上の YAML の場合、各環境に対して Cloud Deploy で次のような値に書き換えられて Cloud Run にデプロイされます。
+
+* dev 環境
+  * `serviceAccountName`: `dummy` → `hello-app@hello-app-dev.iam.gserviceaccount.com`
+  * `env[0].value`: `dummy` → `Hello, dev!`
+* stg 環境
+  * `serviceAccountName`: `dummy` → `hello-app@hello-app-stg.iam.gserviceaccount.com`
+  * `env[0].value`: `dummy` → `Hello, stg!`
+* prd 環境
+  * `serviceAccountName`: `dummy` → `hello-app@hello-app-prd.iam.gserviceaccount.com`
+  * `env[0].value`: `dummy` → `Hello, prd!`
+
+:::details manifest.yaml のレンダリングについての補足
+本記事ではシンプルで学習コストが低く Terraform で管理しやすい deploy parameters を推していますが、`manifest.yaml` が複雑になってくると 1 つの `manifest.yaml` と deploy parameters だけではレンダリングが難しくなってくる場合があるかもしれません。その場合、Cloud Deploy では Helm、Kustomize、kpt が使えるので[それらレンダリングツールの利用](https://cloud.google.com/deploy/docs/using-skaffold/managing-manifests)を検討してください。
+:::
+
+## Target
+
+Cloud Deploy の Target も Delivery Pipeline と同じく Terraform 等で構築しましょう。Terraform の場合は [google_clouddeploy_target](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/clouddeploy_target) リソースを使います。
+
+```tf
+resource "google_clouddeploy_target" "hello-app-dev" {
+  location         = "us-west1
+  name             = "hello-app-dev"
+
+  execution_configs {
+    usages           = ["RENDER", "DEPLOY"]
+    service_account  = google_service_account.hello-app-target-dev.email
+    artifact_storage = "gs://${google_storage_bucket.storage.name}/artifacts"
+  }
+
+  run {
+    location = "projects/${each.value}/locations/${var.region}"
+  }
+
+  deploy_parameters = {
+    message              = "Hello, dev"
+    service_account_name = google_service_account.hello-app-dev.email
+  }
+}
+```
+
+`location` はデプロイ先の Cloud Run ではなく、**Delivery Pipeline** と同じ location にしておく必要があります。
+
+`manifest.yaml` で説明した deploy parameters はここで設定します。
+
+## skaffold.yaml
+
+最後は `skaffold.yaml` です。これまでコンテナイメージのビルド・プッシュを `skaffold build`、`manifest.yaml` のレンダリングを `skaffold render` で行っていると説明しましたが、それらのコマンドの設定を `skaffold.yaml` に記述します。具体的には次の 4 点を設定します。
+
+* `skaffold build`
+  * コンテナイメージタグの命名方法
+  * コンテナイメージ名
+  * コンテナイメージのビルド設定
+* `skaffold render`
+  * `manifest.yaml` のパス
+* `skaffold apply`
+  * 特になし (おまじないのみ)
+
+これらを設定した `skaffold.yaml` は次のようになります。
+
+```yaml
+apiVersion: skaffold/v3
+kind: Config
+metadata:
+  name: hello-app
+build:
+  tagPolicy:
+    envTemplate:
+      template: "{{ .APP_VERSION }}"
+  artifacts:
+    - image: hello-app
+      context: ../../app
+      docker:
+        buildArgs:
+          app_version: "{{ .APP_VERSION }}"
+        dockerfile: ../../app/Dockerfile
+  local:
+    useBuildkit: true
+    push: true
+deploy:
+  cloudrun: {}
+manifests:
+  rawYaml:
+    - manifest.yaml
+```
+
+それぞれの詳しい説明は [skaffold.yaml のリファレンス](https://skaffold.dev/docs/references/yaml/)を参照してください。最低限必要なものは以下で簡単に説明します。
+
+* `build.tagPolicy`: コンテナイメージのタグの命名方法を設定します。上のサンプルは環境変数で設定する `envTemplate` を利用していて `skaffold build` 時に `APP_VERSION` 環境変数に設定した値がタグになります。他には Git から自動でタグを設定する `gitCommit` などが存在します。詳しくは[ドキュメント](https://skaffold.dev/docs/taggers/)を参照してください。
+* `build.artifacts[].image`: コンテナイメージの名前です。`manifest.yaml` の中でこの名前に一致するイメージが実際にビルドしたコンテナイメージに置換されます。
+* `build.artifacts[].context`: `docker build` を実行するときの context です。
+* `build.artifacts[].docker`: `docker build` の設定です。
+* `manifests.rawYaml`: `manifest.yaml` のパスを指定します。`manifest.yaml` は `gcloud deploy releases create` の `--source` オプションで指定したパスに含める必要があり、`--source` オプションで指定したパスからの相対パスになります。
+
+## ディレクトリ構成
+
+`skaffold.yaml` と `manifest.yaml` はそれらだけで同じディレクトリに置いておくと便利です。そうすると、そのディレクトリに入って `skaffold build` や `gcloud deploy releases create` を実行すれば考えることを減らしつついろいろ上手く動きます。
+
+```shell
+.
+├── README.md
+├── app
+│   ├── Dockerfile
+│   ├── go.mod
+│   ├── go.sum
+│   └── main.go
+├── deploy
+│   ├── manifest.yaml
+│   └── skaffold.yaml
+└── terraform
+    ├── pipeline.tf
+    ├── service.tf
+    ├── variables.tf
+    └── versions.tf
+```
+
+# おわりに
+
+概要を調べても何なのかよく分からず、中身もなかなか複雑な Cloud Deploy ですが、本記事の内容を理解すれば問題なく構築・運用できると思います。理解して使えばとても便利なサービスなのでガンガン使っていきましょう 🚀✨
+
+TODO:
+
+* [x] hello-app.yaml から manifest.yaml に変える
+* [x] deployer を releaser に書き換え
+* [ ] カナリアデプロイ
+* [ ] デプロイフック
