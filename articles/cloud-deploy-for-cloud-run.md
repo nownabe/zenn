@@ -14,7 +14,7 @@ published: false
 
 # はじめに
 
-本記事では実践的な Cloud Run のデプロイパイプライン実装を通して Cloud Deploy の理解を試みます。Cloud Deploy は元々 Kubernetes 用のプロダクトとしてリリースされたこともあり、Cloud Run に限って利用するにはわかりにくい部分があります。本記事では Cloud Run のデプロイの本番環境構築・運用に必要な部分のみをピックアップして次のようなことを説明します。
+本記事では実践的な Cloud Run のデプロイパイプライン実装を通して Cloud Deploy の理解を試みます。Cloud Deploy は元々 Kubernetes 用のプロダクトとしてリリースされたこともあり、Cloud Run に限って利用するには学習コストが高すぎるところもあります。本記事では Cloud Run のデプロイの本番環境構築・運用に必要な部分のみをピックアップして次のようなことを説明します。
 
 * Cloud Deploy の仕組み
 * Cloud Deploy を使ったデプロイパイプラインの設計・実装方法
@@ -36,7 +36,7 @@ Automation、デプロイフック、カナリアデプロイなどの高度な�
 
 # Cloud Deploy とは
 
-## 概要
+## Cloud Deploy 概要
 
 「開発環境 → ステージング環境 → 本番環境」のような、異なる環境に対する一連のデプロイパイプラインを管理・自動化するためのフルマネージドサービスです。Cloud Deploy ではそのようなパイプラインを Delivery Pipeline と呼びます。
 
@@ -53,39 +53,39 @@ Cloud Deploy では例えば以下のような Delivery Pipeline を実現でき
 
 ### シリアル デプロイ
 
+[サンプル実装](https://github.com/nownabe/google-cloud-examples/tree/main/cloud-deploy/serial)
+
 ![serial](/images/articles/cloud-deploy-for-cloud-run/serial.png)
 
-1 つの Cloud Run service アプリを各環境に順にデプロイするシンプルなパイプラインです。Google Cloud では環境はプロジェクトを分けることが一般的であるため、Delivery Pipeline はプロジェクトをまたいで構築することになります。
-
-[サンプル実装](https://github.com/nownabe/google-cloud-examples/tree/main/cloud-deploy/serial)
+1 つの Cloud Run service アプリを dev → stg → prd と順にデプロイするシンプルなパイプラインです。
 
 ### 並行デプロイ
 
-![multi-region](/images/articles/cloud-deploy-for-cloud-run/multi-region.png)
-
-複数の Cloud Run service アプリを各環境に順にデプロイするパイプラインです。ひとつの環境に対しては複数の Cloud Run service を同時にデプロイします。例えば、同じアプリをマルチリージョンにデプロイしている場合などに役立ちます。
-
 [サンプル実装](https://github.com/nownabe/google-cloud-examples/tree/main/cloud-deploy/multi-region)
 
+![multi-region](/images/articles/cloud-deploy-for-cloud-run/multi-region.png)
+
+複数の Cloud Run service アプリを各環境に順にデプロイするパイプラインです。ひとつの環境に対しては複数の Cloud Run service を同時にデプロイします。例えば、1 つの Delivery Pipeline で同じアプリをマルチリージョンに同時にデプロイできます。
+
 ### カナリア デプロイ
+
+[サンプル実装](https://github.com/nownabe/google-cloud-examples/tree/main/cloud-deploy/canary)
 
 ![canary](/images/articles/cloud-deploy-for-cloud-run/canary.png)
 
 カナリアデプロイもできます。
 
-[サンプル実装](https://github.com/nownabe/google-cloud-examples/tree/main/cloud-deploy/canary)
-
 # Cloud Deploy のアーキテクチャとデプロイの流れ
 
-Delivery Pipeline を正しく構築するためには Cloud Deploy がどのようなアーキテクチャで、どうやってデプロイするかを理解しておく必要があります。
+Delivery Pipeline を正しく構築するためには Cloud Deploy がどのようなアーキテクチャでどうやってデプロイするかを理解しておく必要があるためそれを説明します。
 
 ## Skaffold
 
-まずはじめに、Cloud Deploy を使い始めた人が戸惑うであろう Skaffold について説明します。
+まずはじめに、Cloud Deploy を使い始めた人が戸惑うであろう [Skaffold](https://skaffold.dev/) について説明します。
 
-Cloud Deploy は [Skaffold](https://skaffold.dev/) という OSS を利用してデプロイを実現します。Skaffold は Kubernetes 用の開発ツールで機能が多く学習コストも高いのですが、Cloud Run のデプロイをする場合は一旦次のような理解を持っておけば大丈夫です。
+Cloud Deploy は Skaffold という OSS を利用してデプロイを実現します。Skaffold は Kubernetes 用の開発ツールで機能が多く学習コストも高いのですが、Cloud Run のデプロイをする場合は一旦次のような理解を持っておけば大丈夫です。
 
-Skaffold は `skaffold.yaml` という YAML ファイルの設定に以下を行います。
+Skaffold は `skaffold.yaml` という YAML ファイルの設定に従い以下を行う。
 
 * コンテナイメージをビルドして Artifact Registry にプッシュする
 * ビルドしたイメージに基づいて [Cloud Run service YAML](https://cloud.google.com/run/docs/reference/yaml/v1) をレンダリングする (以下、`manifest.yaml` とします)
@@ -97,11 +97,11 @@ Cloud Deploy の Delivery Pipeline は [Delivery Pipeline](https://cloud.google.
 
 ![architecture](/images/articles/cloud-deploy-for-cloud-run/architecture.png)
 
-Delivery Pipeline は Cloud Deploy のメインとなるリソースで、何をどういう順番でデプロイするかを定義します。順番の定義には [Stage](https://cloud.google.com/deploy/docs/terminology#stage) という概念が使われます。例えば dev / stg / prd 環境があるとき、それぞれ dev stage、stg stage、prd stage を定義します。各 Stage には 1 つ以上の Target が紐付きます。
+Delivery Pipeline は Cloud Deploy のメインとなるリソースで、何をどういう順番でデプロイするかを定義します。順番の定義には [Stage](https://cloud.google.com/deploy/docs/terminology#stage) という概念が使われます。例えば dev、stg、prd 環境があるとき、それぞれ dev の stage、stg の stage、prd の stage を定義します。そして各 Stage には 1 つ以上の Target が紐付きます。
 
 Target はデプロイ先を表現するリソースで、Cloud Run の場合はデプロイ先のプロジェクトとロケーションを定義します。
 
-Delivery Pipeline と Target を擬似的な Terraform で表現すると次のようになります。
+Delivery Pipeline と Target を Terraform で表現すると次のようになります。
 
 ```tf
 resource "google_clouddeploy_target" "hello-app-dev" {
@@ -128,9 +128,9 @@ resource "google_clouddeploy_target" "hello-app-prd" {
 resource "google_clouddeploy_delivery_pipeline" "delivery-pipeline" {
   name = "hello-app-pipeline"
   serial_pipeline {
-    stages { target_id = "hello-app-dev" }
-    stages { target_id = "hello-app-stg" }
-    stages { target_id = "hello-app-prd" }
+    stages { target_id = google_clouddeploy_target.hello-app-dev.id }
+    stages { target_id = google_clouddeploy_target.hello-app-stg.id }
+    stages { target_id = google_clouddeploy_target.hello-app-prd.id }
   }
 }
 ```
@@ -148,9 +148,9 @@ Cloud Deploy での一連のデプロイは大きく次のような流れにな�
 
 ### 事前準備
 
-Cloud Deploy はあくまでもデプロイに特化したサービスなので、コンテナイメージのビルド等を事前にやっておく必要があります。具体的には `skaffold build` の実行が事前に必要です。
+Cloud Deploy はあくまでもデプロイに特化したサービスなので、コンテナイメージのビルド等を事前にやっておく必要があります。具体的には `skaffold build` コマンドの実行が事前に必要です。
 
-次のようなコマンドを実行すると、Skaffold が `skaffold.yaml` の設定に従いコンテナイメージをビルド、プッシュして結果を `artifacts.json` として出力します。
+次のようなコマンドを実行すると、Skaffold が `skaffold.yaml` の設定に従いコンテナイメージをビルド・プッシュして結果を `artifacts.json` として出力します。
 
 ```shell
 skaffold build \
@@ -174,7 +174,7 @@ skaffold build \
 
 ### Release 作成
 
-Cloud Deploy でのデプロイはまず [Release](https://cloud.google.com/deploy/docs/api/reference/rest/v1/projects.locations.deliveryPipelines.releases) というリソースを作ります。Release は事前準備でビルドしたコンテナイメージを Delivery Pipeline に紐付けるリソースです。Release はコンテナイメージの情報以外にも Cloud Run service YAML をレンダリングするためのソースを持っています。具体的には、`skaffold.yaml` と `manifest.yaml` のテンプレートを格納した `.tgz` を保存している Cloud Storage の URI です。
+Cloud Deploy でのデプロイはまず [Release](https://cloud.google.com/deploy/docs/api/reference/rest/v1/projects.locations.deliveryPipelines.releases) というリソースを作ります。Release は事前準備でビルドしたコンテナイメージを Delivery Pipeline に紐付けるリソースです。Release を作ることで紐づけたコンテナイメージを Cloud Run service へデプロイできるようになります。Release はコンテナイメージの情報以外にも `manifest.yaml` をレンダリングするためのソース (`skaffold.yaml` と `manifest.yaml` のテンプレート) が保存された Cloud Storage の URI を持ちます。
 
 ![release](/images/articles/cloud-deploy-for-cloud-run/release.png)
 
@@ -190,7 +190,7 @@ gcloud deploy releases create v-1-0-0 \
   --source .
 ```
 
-また、Release は作成されると同時に全 Target に対する `manifest.yaml` をレンダリングして Cloud Storage に保存します。具体的には各 Target ごとに Cloud Build 上で `skaffold render` コマンドを実行します。
+また、Release は作成されると同時に全 Target に対する `manifest.yaml` をレンダリングして Cloud Storage に保存します。具体的には各 Target ごとに Cloud Build を起動して `skaffold render` コマンドを実行します。
 
 ![render-manifest](/images/articles/cloud-deploy-for-cloud-run/render-manifest.png)
 
@@ -198,13 +198,13 @@ gcloud deploy releases create v-1-0-0 \
 
 Release を作成したあと、その Release を Promote して次の Stage へ実際にデプロイします。
 
-実は、Cloud Deploy でよく目にする「Promote」ですが、具体的な「Promote」という処理は存在しません。Promote をしたとき、具体的な処理としては [Rollout](https://cloud.google.com/deploy/docs/api/reference/rest/v1/projects.locations.deliveryPipelines.releases.rollouts) というリソースの作成をしています。
+実は、Cloud Deploy でよく目にする「Promote」ですが、API 的に「Promote」という処理は存在しません。Promote といわれたとき、具体的な処理としては [Rollout](https://cloud.google.com/deploy/docs/api/reference/rest/v1/projects.locations.deliveryPipelines.releases.rollouts) というリソースの作成をしています。
 
-Rollout は Release と Target を紐付けるリソースです。Rollout を作成すると Cloud Build 上で `skaffold apply` を実行して、レンダリング済みの `manifest.yaml` を Target にデプロイします。
+Rollout は Release と Target を紐付けるリソースです。Cloud Deploy は Rollout が作成されると Cloud Build を起動して `skaffold apply` コマンドによりレンダリング済みの `manifest.yaml` を Target にデプロイします。
 
 ![create-rollout](/images/articles/cloud-deploy-for-cloud-run/create-rollout.png)
 
-以上をおさえた上で「Promote する」とは、一般的には「対象とする Release について次の Stage が指す Target への Rollout を作成する」ことです。 gcloud を使って Promote するには次のようにします。
+以上をおさえた上で「Promote する」とは、一般的には「対象とする Release について、次の Stage が指す Target に紐づく Rollout を作成する」ことです。 gcloud を使って Promote するには次のようにします。
 
 ```shell
 gcloud deploy releases promote \
@@ -228,21 +228,21 @@ Promote は実態としては特定の Target に対する Rollout の作成で�
 Cloud Deploy を使った dev → stg → prd というデプロイパイプラインにおけるデプロイの流れをまとめると次のようになります。
 
 1. **事前準備**
-    * `skaffold build` を使ってコンテナイメージをビルド、プッシュする
+    * `skaffold build` でコンテナイメージをビルドして Artifact Registry へプッシュする
     * ビルド結果として `artifacts.json` を手に入れる
 2. **Release 作成**
     * `gcloud deploy releases create` コマンド等で Release を作成する
-    * Release は `skaffold.yaml`、`manifest.yaml` (テンプレート)、`artifacts.json` から各 Target にデプロイするための `manifest.yaml` を `skaffold render` でレンダリングし、Cloud Storage へ格納する
+    * Release は各 Target にデプロイするための `manifest.yaml` を `skaffold render` でレンダリングして Cloud Storage へ格納する
     * 自動的に dev 環境への Rollout が作成される
-    * dev 環境への Rollout は `skaffold apply` を実行して dev 用にレンダリングされた `manifest.yaml` を dev 環境へデプロイする
+    * Rollout は `skaffold apply` で dev 用の `manifest.yaml` を dev 環境へデプロイする
 3. **stg 環境への Promote**
     * `gcloud deploy releases promote` コマンド等で Promote する
     * stg 環境への Rollout が作成される
-    * stg 環境への Rollout は `skaffold apply` を実行して stg 用にレンダリングされた `manifest.yaml` を stg 環境へデプロイする
+    * Rollout は `skaffold apply` で stg 用の `manifest.yaml` を stg 環境へデプロイする
 4. **prd 環境への Promote**
     * `gcloud deploy releases promote` コマンド等で Promote する
     * prd 環境への Rollout が作成される
-    * prd 環境への Rollout は `skaffold apply` を実行して prd 用にレンダリングされた `manifest.yaml` を prd 環境へデプロイする
+    * Rollout は `skaffold apply` で prd 用の `manifest.yaml` を prd 環境へデプロイする
 
 
 ![flow](/images/articles/cloud-deploy-for-cloud-run/flow.png)
@@ -252,7 +252,7 @@ Cloud Deploy を使った dev → stg → prd というデプロイパイプラ�
 
 ここからは `hello-app` という Cloud Run service アプリの dev → stg → prd というデプロイパイプライン構築を通して Cloud Deploy の仕組み、おすすめの構築方法、おすすめの設計を説明していきます。
 
-サンプルの Terraform コードは省略して書いてあるためそのままコピペしても動きません。[サンプルコード](https://github.com/nownabe/google-cloud-examples/tree/main/cloud-deploy/serial)からコピーするようにしてください。
+記事上の Terraform コードは省略して書いてあるためそのままコピペしても動きません。[サンプルコード](https://github.com/nownabe/google-cloud-examples/tree/main/cloud-deploy/serial)を参照してください。
 
 ## プロジェクト構成
 
@@ -270,46 +270,40 @@ Delivery Pipeline 周辺にどのような登場人物 (Google Cloud 用語で [
 
 ![principals](/images/articles/cloud-deploy-for-cloud-run/principals.png)
 
-それぞれ簡単に説明します。
+それぞれ役割とやることを簡単に説明します。
 
-* **image builder**: コンテナイメージをビルド・プッシュする人。`skaffold build` を実行する
-* **releaser**: Release を作成する人。`gcloud deploy releases create` を実行する
-* **xxx promoter**: 各環境への Rollout を作成する人。`gcloud deploy releases promote` を実行する
+* **releaser**: 事前準備と Release 作成をする人
+  * `skaffold build` の実行 (コンテナイメージのビルド・プッシュ)
+  * `gcloud deploy releases create` の実行 (Release の作成)
+  * 結果として dev への Rollout 作成
+* **stg promoter**: stg への Rollout を作成する人
+  * `gcloud deploy releases promote` の実行 (stg への Rollout 作成)
+* **prd promoter**: prd への Rollout を作成する人
+  * `gcloud deploy releases promote` の実行 (prd への Rollout 作成)
 * **Cloud Build の Service Account**: 各 Target に関する Cloud Build の Service Account。`skaffold render` や `skaffold apply` を実行する
-* **Cloud Run service の Service Account**: 各 Cloud Run service の Service Account
-
-細かく考えると上記のような Principals がありますが今回は次のようにします。
-
-* releaser に image builder と dev promoter を含める
-  * 多くの場合、コンテナイメージのビルド・プッシュから dev 環境へのデプロイは自動化して同時に実施することが多いため
-* Cloud Run の Service Account は考えない
-  * Delivery Pipeline 周辺においては Principal として登場しないため
-
-![principals2](/images/articles/cloud-deploy-for-cloud-run/principals2.png)
-
 
 ### releaser の権限
 
-releaser は次の処理を行います。また、各処理に必要な role または permission を併記します。
+releaser は次の処理を行います。各処理に必要な role または permission を併記します。
 
 * `skaffold build`
   * コンテナイメージをビルド
-  * コンテナイメージをプッシュ (Artifact Registry repository への `roles/artifactregistry.writer`)
+  * コンテナイメージをプッシュ (Artifact Registry repository に対する `roles/artifactregistry.writer`)
 * `gcloud deploy releases create`
-  * Release の作成 (Delivery Pipeline への `clouddeploy.releases.create`)
-    * `source.tgz` を Cloud Storage へアップロード (Cloud Storage bucket への `roles/storage.objectCreator`, `roles/storage.legacyBucketReader`)
-    * 各 Target に対して `skaffold render` を実行するための Cloud Build の起動 (各 Target に設定された Service Account への `roles/iam.serviceAccountUser`)
-  * dev に対する Rollout の作成 (Delivery Pipeline への条件付き `roles/clouddeploy.releaser`)
-    * dev Target に対して `skaffold apply` を実行するための Cloud Build の起動 (dev Target に設定された Service Account への `roles/iam.serviceAccountUser`)
+  * Release の作成 (Delivery Pipeline に対する `clouddeploy.releases.create`)
+    * `source.tgz` を Cloud Storage へアップロード (Cloud Storage bucket に対する `roles/storage.objectCreator`、`roles/storage.legacyBucketReader`)
+    * 各 Target に対して `skaffold render` を実行するための Cloud Build の起動 (各 Target に設定された Service Account に対する `roles/iam.serviceAccountUser`)
+  * dev に対する Rollout の作成 (Delivery Pipeline に対する条件付き `roles/clouddeploy.releaser`)
+    * dev Target に対して `skaffold apply` を実行するための Cloud Build の起動 (dev Target に設定された Service Account に対する `roles/iam.serviceAccountUser`)
   * 非同期処理 ([Operations](https://cloud.google.com/deploy/docs/api/reference/rest/v1/projects.locations.operations)) の取得 (pipeline プロジェクトへの `roles/clouddeploy.viewer`)
 
 :::details releaser に必要な権限の補足
 Rollout を作成するとき各 Target に対する読み取り権限も必要になります。今回は Operation を取得するためにプロジェクトへ `roles/clouddeploy.viewer` をつける必要があり、それで全 Target を読み取りできるようになるので省略しています。
 :::
 
-releaser の処理は自動化され、ソースコードの変更をトリガーに起動する GitHub Workflow や Cloud Build が実態となるケースが多いので、それに対応する Service Account へこれらの権限を付与することになるでしょう。
+releaser の処理はソースコードの変更をトリガーに起動する GitHub Workflow や Cloud Build で自動化されるケースが多いので、それに対応する Service Account へこれらの権限を付与することになるでしょう。
 
-Terraform で権限を設定すると次のようになります。
+ある Service Account を releaser としたときに Terraform で権限を設定すると次のようになります。
 
 ```tf
 resource "google_service_account" "hello-app-releaser" {
@@ -390,7 +384,7 @@ Terraform では releaser に対する権限設定が複雑になっています
 
 ### Cloud Build の Service Account
 
-Delivery Pipeline から起動される Cloud Build にアタッチされる Service Account は、その Cloud Build がどの Target に関するものかで決まります。例えば dev Target に関する Cloud Build の Service Account を設定する Terraform は次のようになります。
+Delivery Pipeline から起動される Cloud Build にアタッチされる Service Account は、その Cloud Build がどの Target に関するものかで決まります。例えば dev Target に関する Cloud Build にアタッチする Service Account を設定する Terraform は次のようになります。
 
 ```tf
 resource "google_service_account" "hello-app-target-dev" {
@@ -469,14 +463,14 @@ Cloud Deploy のデフォルトの設定では `source.tgz` を格納する Clou
 
 ### stg promoter と prd promoter
 
-stg promoter と prd promoter は releaser のサブセットと捉えることができます。stg promoter は次の処理を行います (prd promoter も同様)。
+stg promoter は次の処理を行います (prd promoter も同様)。
 
 * `gcloud deploy releases promote`
   * stg に対する Rollout の作成 (Delivery Pipeline への条件付き `roles/clouddeploy.releaser`)
     * stg Target に対して `skaffold apply` を実行するための Cloud Build の起動 (stg Target に設定された Service Account への `roles/iam.serviceAccountUser`)
   * 非同期処理 ([Operations](https://cloud.google.com/deploy/docs/api/reference/rest/v1/projects.locations.operations)) の取得 (pipeline プロジェクトへの `roles/clouddeploy.viewer`)
 
-promoter は releaser と違って SRE などの人となることも多いです。もしくは人やなんらかのイベントがトリガーする自動化システムになるでしょう。
+promoter は SRE などの人、もしくは人やなんらかのイベントがトリガーする自動化システムになるでしょう。
 
 stg promoter を Service Account として実装する場合の権限設定 Terraform は次のようになります (prd promoter も同様)。
 
@@ -541,7 +535,7 @@ resource "google_clouddeploy_delivery_pipeline" "hello-app-pipeline" {
 
 `location` は、デプロイ先の location とは無関係です。
 
-多くのドキュメントやサンプルで、各ステージに `profiles` というものを設定していますが、これは不要です。むしろ、特に Cloud Run の場合、使わないようにしたほうがシンプルでわかりやすく構成できます。
+多くのドキュメントやサンプルで、各ステージに `profiles` というものを設定していますが不要です。特に Cloud Run の場合は使わないようにしたほうがシンプルでわかりやすく構成できます。
 
 ## manifest.yaml
 
@@ -555,7 +549,7 @@ gcloud run services describe hello-app \
   --format yaml
 ```
 
-`manifest.yaml` は Cloud Run service アプリに対して 1 つあればよく (dev、stg、prd それぞれ別のものを作る必要はない)、最小の `manifest.yaml` は次のようになります。
+`manifest.yaml` は Cloud Run service アプリに対して 1 つあればよく (dev、stg、prd それぞれ別に作る必要はない)、簡単な `manifest.yaml` は次のようになります。
 
 ```yaml
 apiVersion: serving.knative.dev/v1
@@ -576,9 +570,9 @@ spec:
               value: dummy # from-param: ${message}
 ```
 
-ここで、`# from-param: ${service_account_name}` のようなコメントがついているフィールドがありますが、**このコメントには意味があります**。この `# from-param:` によって設定されたパラメータは [deploy parameters](https://cloud.google.com/deploy/docs/parameters) と呼ばれます。deploy parameters は Target ごとに設定できるため、環境ごとに変化する値を使いたい場合は deploy parameters を利用します。
+ここで、`# from-param: ${service_account_name}` のようなコメントがついているフィールドがありますが、このコメントには意味があります。`# from-param:` によって設定されるパラメータは [deploy parameters](https://cloud.google.com/deploy/docs/parameters) と呼ばれます。deploy parameters は Target ごとに設定できるため、環境ごとに変化する値を使いたい場合は deploy parameters を利用します。
 
-例えば上の YAML の場合、各環境に対して Cloud Deploy で次のような値に書き換えられて Cloud Run にデプロイされます。
+例えば上の YAML の場合、Cloud Deploy で各環境に対して次のような値に書き換えられてから Cloud Run にデプロイされます。
 
 * dev 環境
   * `serviceAccountName`: `dummy` → `hello-app@hello-app-dev.iam.gserviceaccount.com`
@@ -600,7 +594,7 @@ Cloud Deploy の Target も Delivery Pipeline と同じく Terraform 等で構�
 
 ```tf
 resource "google_clouddeploy_target" "hello-app-dev" {
-  location         = "us-west1
+  location         = "us-west1"
   name             = "hello-app-dev"
 
   execution_configs {
@@ -610,11 +604,11 @@ resource "google_clouddeploy_target" "hello-app-dev" {
   }
 
   run {
-    location = "projects/${each.value}/locations/${var.region}"
+    location = "projects/hello-app-dev/locations/us-west1"
   }
 
   deploy_parameters = {
-    message              = "Hello, dev"
+    message              = "Hello, dev!"
     service_account_name = google_service_account.hello-app-dev.email
   }
 }
@@ -626,7 +620,7 @@ resource "google_clouddeploy_target" "hello-app-dev" {
 
 ## skaffold.yaml
 
-最後は `skaffold.yaml` です。これまでコンテナイメージのビルド・プッシュを `skaffold build`、`manifest.yaml` のレンダリングを `skaffold render` で行っていると説明しましたが、それらのコマンドの設定を `skaffold.yaml` に記述します。具体的には次の 4 点を設定します。
+これまでコンテナイメージのビルド・プッシュを `skaffold build`、`manifest.yaml` のレンダリングを `skaffold render` で行っていると説明しましたが、それらのコマンドの設定を `skaffold.yaml` に記述します。
 
 * `skaffold build`
   * コンテナイメージタグの命名方法
@@ -667,15 +661,15 @@ manifests:
 
 それぞれの詳しい説明は [skaffold.yaml のリファレンス](https://skaffold.dev/docs/references/yaml/)を参照してください。最低限必要なものは以下で簡単に説明します。
 
-* `build.tagPolicy`: コンテナイメージのタグの命名方法を設定します。上のサンプルは環境変数で設定する `envTemplate` を利用していて `skaffold build` 時に `APP_VERSION` 環境変数に設定した値がタグになります。他には Git から自動でタグを設定する `gitCommit` などが存在します。詳しくは[ドキュメント](https://skaffold.dev/docs/taggers/)を参照してください。
+* `build.tagPolicy`: コンテナイメージのタグ命名方法を設定します。上のサンプルは環境変数で設定する `envTemplate` を利用していて `skaffold build` 時に `APP_VERSION` 環境変数に設定した値がタグになります。他には Git から自動でタグを設定する `gitCommit` などが存在します。詳しくは[ドキュメント](https://skaffold.dev/docs/taggers/)を参照してください。
 * `build.artifacts[].image`: コンテナイメージの名前です。`manifest.yaml` の中でこの名前に一致するイメージが実際にビルドしたコンテナイメージに置換されます。
 * `build.artifacts[].context`: `docker build` を実行するときの context です。
 * `build.artifacts[].docker`: `docker build` の設定です。
-* `manifests.rawYaml`: `manifest.yaml` のパスを指定します。`manifest.yaml` は `gcloud deploy releases create` の `--source` オプションで指定したパスに含める必要があり、`--source` オプションで指定したパスからの相対パスになります。
+* `manifests.rawYaml`: `manifest.yaml` のパスを指定します。
 
 ## ディレクトリ構成
 
-`skaffold.yaml` と `manifest.yaml` はそれらだけで同じディレクトリに置いておくと便利です。そうすると、そのディレクトリに入って `skaffold build` や `gcloud deploy releases create` を実行すれば考えることを減らしつついろいろ上手く動きます。
+`skaffold.yaml` と `manifest.yaml` はそれらだけで同じディレクトリに置いておくと便利です。そうすると、そのディレクトリに入って `skaffold build` や `gcloud deploy releases create` を実行すればいろいろ上手く動きます。
 
 ```shell
 .
@@ -698,10 +692,3 @@ manifests:
 # おわりに
 
 概要を調べても何なのかよく分からず、中身もなかなか複雑な Cloud Deploy ですが、本記事の内容を理解すれば問題なく構築・運用できます。理解して使えばとても便利なサービスなのでガンガン使っていきましょう 🚀✨
-
-TODO:
-
-* [x] hello-app.yaml から manifest.yaml に変える
-* [x] deployer を releaser に書き換え
-* [ ] カナリアデプロイ
-* [ ] デプロイフック
