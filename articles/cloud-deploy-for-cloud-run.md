@@ -24,9 +24,9 @@ published: false
 
 Automation、デプロイフック、カナリアデプロイなどの高度なパイプライン、監視などは上記のような基本をおさえれば応用が効くので本記事では説明しません。
 
-本記事の想定読者は Cloud Run は使っているけど Cloud Deploy は使っていないという人です。Kubernetes の知識がなくても理解できるようにしていますが、次のような知識を前提としています。
+本記事の想定読者は Cloud Run を使っているが Cloud Deploy は使っていないという人です。Kubernetes の知識がなくても理解できるようにしていますが、次のような知識を前提としています。
 
-* Google Cloud (gcloud CLI, プロジェクト, IAM, Service Account, Cloud Run, Cloud Build, Cloud Storage, Artifact Registry)
+* Google Cloud (gcloud CLI、プロジェクト、IAM、Service Account、Cloud Run、Cloud Build、Cloud Storage、Artifact Registry)
 * Docker、コンテナ
 * Terraform
 
@@ -55,7 +55,7 @@ Cloud Deploy では例えば以下のような Delivery Pipeline を実現でき
 
 ![serial](/images/articles/cloud-deploy-for-cloud-run/serial.png)
 
-1つの Cloud Run service アプリを各環境に順にデプロイするシンプルなパイプラインです。Google Cloud では環境はプロジェクトを分けることが一般的であるため、Delivery Pipeline はプロジェクトをまたいで構築することになります。
+1 つの Cloud Run service アプリを各環境に順にデプロイするシンプルなパイプラインです。Google Cloud では環境はプロジェクトを分けることが一般的であるため、Delivery Pipeline はプロジェクトをまたいで構築することになります。
 
 [サンプル実装](https://github.com/nownabe/google-cloud-examples/tree/main/cloud-deploy/serial)
 
@@ -85,11 +85,11 @@ Delivery Pipeline を正しく構築するためには Cloud Deploy がどのよ
 
 Cloud Deploy は [Skaffold](https://skaffold.dev/) という OSS を利用してデプロイを実現します。Skaffold は Kubernetes 用の開発ツールで機能が多く学習コストも高いのですが、Cloud Run のデプロイをする場合は一旦次のような理解を持っておけば大丈夫です。
 
-Skaffold は `skaffold.yaml` という YAML ファイルの設定に従い、
+Skaffold は `skaffold.yaml` という YAML ファイルの設定に以下を行います。
 
-* コンテナイメージをビルド・プッシュする
+* コンテナイメージをビルドして Artifact Registry にプッシュする
 * ビルドしたイメージに基づいて [Cloud Run service YAML](https://cloud.google.com/run/docs/reference/yaml/v1) をレンダリングする (以下、`manifest.yaml` とします)
-* レンダリングした `manifest.yaml` をデプロイする
+* レンダリングした `manifest.yaml` を Cloud Run service にデプロイする
 
 ## Cloud Deploy のアーキテクチャ
 
@@ -204,7 +204,7 @@ Rollout は Release と Target を紐付けるリソースです。Rollout を�
 
 ![create-rollout](/images/articles/cloud-deploy-for-cloud-run/create-rollout.png)
 
-以上をおさえた上で「Promoteする」とは、一般的には「対象とする Release について次の Stage が指す Target への Rollout を作成する」ことです。 gcloud を使って Promote するには次のようにします。
+以上をおさえた上で「Promote する」とは、一般的には「対象とする Release について次の Stage が指す Target への Rollout を作成する」ことです。 gcloud を使って Promote するには次のようにします。
 
 ```shell
 gcloud deploy releases promote \
@@ -220,7 +220,7 @@ gcloud deploy releases promote \
 :::
 
 :::details Promote についての補足
-Promote は実態としては特定の Target に対する Rollout の作成です。このことを理解しておけば、必ずしも dev → stg → prd という順番を守ってデプロイする必要はないことがわかります。例えば、`--disable-initial-rollout` オプションを使って `gcloud deploy releases create` を実行すると、dev への Rollout を作成せずに Release を作成することができます。その状態で、`--to-target` オプションを使って `gcloud deploy releases promote` を実行するといきなり prd 環境へデプロイすることもできます。prd 環境へ hotfix する場合などに活用できます。
+Promote は実態としては特定の Target に対する Rollout の作成です。このことを理解しておけば、必ずしも dev → stg → prd という順番を守ってデプロイする必要はないことがわかります。例えば、`--disable-initial-rollout` オプションを使って `gcloud deploy releases create` を実行すると、dev への Rollout を作成せずに Release を作成できます。その状態で、`--to-target` オプションを使って `gcloud deploy releases promote` を実行するといきなり prd 環境へデプロイすることも可能です。prd 環境へ hotfix する場合などに活用できます。
 :::
 
 ### まとめ
@@ -304,10 +304,10 @@ releaser は次の処理を行います。また、各処理に必要な role �
   * 非同期処理 ([Operations](https://cloud.google.com/deploy/docs/api/reference/rest/v1/projects.locations.operations)) の取得 (pipeline プロジェクトへの `roles/clouddeploy.viewer`)
 
 :::details releaser に必要な権限の補足
-Rollout を作成するときに各 Target に対する読み取り権限も必要になりますが、Operation を取得するためにプロジェクトに `roles/clouddeploy.viewer` をつける必要があり、それで全 Target を読み取りできるようになるので省略しています。
+Rollout を作成するとき各 Target に対する読み取り権限も必要になります。今回は Operation を取得するためにプロジェクトへ `roles/clouddeploy.viewer` をつける必要があり、それで全 Target を読み取りできるようになるので省略しています。
 :::
 
-releaser の処理は自動化され、ソースコードの変更をトリガーに起動する GitHub Workflow や Cloud Build が実態となるケースが多いので、それに対応する Service Account にこれらの権限を付与することになるでしょう。
+releaser の処理は自動化され、ソースコードの変更をトリガーに起動する GitHub Workflow や Cloud Build が実態となるケースが多いので、それに対応する Service Account へこれらの権限を付与することになるでしょう。
 
 Terraform で権限を設定すると次のようになります。
 
@@ -385,7 +385,7 @@ resource "google_project_iam_member" "hello-app-deployer_clouddeploy_viewer" {
 ```
 
 :::details releaser の権限設定の補足
-Terraform を見ると releaser に対する権限設定が複雑なことがわかります。これは、releaser が stg や prd にデプロイできないようにするために必要な設定です。Delivery Pipeline に Release を作成するための role として `roles/clouddeploy.releaser` がありますが、これには Rollout を作成する permission も含まれているため、Delivery Pipeline に対して条件なしで付与するとすべての Target へのデプロイができるようになってしまいます。そのため、Release を作成するためだけの custom role を作成しています。また、`roles/clouddeploy.releaser` は dev 環境に対してのみ有効化されるような条件を設定しています。
+Terraform では releaser に対する権限設定が複雑になっていますが、releaser が stg や prd へデプロイできなくするために必要な設定です。Delivery Pipeline に Release を作成するための role として `roles/clouddeploy.releaser` がありますが、これには Rollout を作成する permission も含まれているため、Delivery Pipeline に対して条件なしで付与するとすべての Target へのデプロイができるようになってしまいます。そのため、Release を作成するためだけの custom role を作成しています。また、`roles/clouddeploy.releaser` は dev 環境に対してのみ有効化されるような条件を設定しています。
 :::
 
 ### Cloud Build の Service Account
@@ -411,7 +411,7 @@ resource "google_clouddeploy_target" "hello-app-target-dev" {
 }
 ```
 
-一つの Target に対して Cloud Build は 2 回、Release 作成時と Rollout 作成時にそれぞれ起動されます。それぞれで実行する処理と必要な権限は次のようになります。
+1 つの Target に対して Cloud Build は 2 回、Release 作成時と Rollout 作成時にそれぞれ起動されます。それぞれで実行する処理と必要な権限は次のようになります。
 
 * `skaffold render` (Release 作成時に起動される)
   * `source.tgz` を Cloud Storage からダウンロード (Cloud Storage bucket への `roles/storage.objectViewer`)
@@ -476,7 +476,7 @@ stg promoter と prd promoter は releaser のサブセットと捉えること�
     * stg Target に対して `skaffold apply` を実行するための Cloud Build の起動 (stg Target に設定された Service Account への `roles/iam.serviceAccountUser`)
   * 非同期処理 ([Operations](https://cloud.google.com/deploy/docs/api/reference/rest/v1/projects.locations.operations)) の取得 (pipeline プロジェクトへの `roles/clouddeploy.viewer`)
 
-promoter は releaser と違って SRE などの人となることも多いです。もしくは人かなんらかイベントがトリガーする自動化システムになるでしょう。
+promoter は releaser と違って SRE などの人となることも多いです。もしくは人やなんらかのイベントがトリガーする自動化システムになるでしょう。
 
 stg promoter を Service Account として実装する場合の権限設定 Terraform は次のようになります (prd promoter も同様)。
 
@@ -547,7 +547,7 @@ resource "google_clouddeploy_delivery_pipeline" "hello-app-pipeline" {
 
 `manifest.yaml` は [Cloud Run service YAML](https://cloud.google.com/run/docs/reference/yaml/v1#service) のことです。普段 Cloud Run を使うだけであればこの YAML は必要ないのですが、Cloud Deploy を使う場合は必要になります。
 
-現在 Cloud Run を使っているのであれば、この YAML はコンソールからも確認できますし、次のコマンドで確認することもできます。コピペして[リファレンス](https://cloud.google.com/run/docs/reference/yaml/v1#service)と見比べながら不必要なものを削除していくのがいいでしょう。
+現在 Cloud Run を使っているのであれば、この YAML はコンソールからも確認できますし、次のコマンドでも確認できます。コピペして[リファレンス](https://cloud.google.com/run/docs/reference/yaml/v1#service)と見比べながら不必要なものを削除していくのがいいでしょう。
 
 ```shell
 gcloud run services describe hello-app \
@@ -697,7 +697,7 @@ manifests:
 
 # おわりに
 
-概要を調べても何なのかよく分からず、中身もなかなか複雑な Cloud Deploy ですが、本記事の内容を理解すれば問題なく構築・運用できると思います。理解して使えばとても便利なサービスなのでガンガン使っていきましょう 🚀✨
+概要を調べても何なのかよく分からず、中身もなかなか複雑な Cloud Deploy ですが、本記事の内容を理解すれば問題なく構築・運用できます。理解して使えばとても便利なサービスなのでガンガン使っていきましょう 🚀✨
 
 TODO:
 
