@@ -69,6 +69,12 @@ Cloud Deploy では例えば以下のような Delivery Pipeline を実現でき
 
 ### カナリア デプロイ
 
+![canary](/images/articles/cloud-deploy-for-cloud-run/canary.png)
+
+カナリアデプロイもできます。
+
+[サンプル実装](https://github.com/nownabe/google-cloud-examples/tree/main/cloud-deploy/canary)
+
 ### デプロイフック
 
 # Cloud Deploy のアーキテクチャとデプロイの流れ
