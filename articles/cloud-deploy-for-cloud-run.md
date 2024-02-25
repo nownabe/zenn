@@ -75,8 +75,6 @@ Cloud Deploy では例えば以下のような Delivery Pipeline を実現でき
 
 [サンプル実装](https://github.com/nownabe/google-cloud-examples/tree/main/cloud-deploy/canary)
 
-### デプロイフック
-
 # Cloud Deploy のアーキテクチャとデプロイの流れ
 
 Delivery Pipeline を正しく構築するためには Cloud Deploy がどのようなアーキテクチャで、どうやってデプロイするかを理解しておく必要があります。
