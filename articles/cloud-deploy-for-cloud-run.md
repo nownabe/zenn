@@ -9,7 +9,7 @@ topics:
 - clouddeploy
 - cloudrun
 publication_name: knowledgework
-published: false
+published: true
 ---
 
 # はじめに
