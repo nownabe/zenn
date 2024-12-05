@@ -7,7 +7,7 @@ published: false
 publication_name: knowledgework
 ---
 
-ナレッジワークでは業務効率化を目的として Golink を導入しています。この記事では Google Cloud で構築した Golink のアーキテクチャと、導入して1年経った今の状況を紹介します。
+ナレッジワークでは業務効率化を目的として Golink を導入しています。この記事では Google Cloud で構築した Golink のアーキテクチャと、導入して 1 年経った今の状況を紹介します。
 
 本記事は [Google Cloud Champion Innovators Advent Calendar 2024](https://adventar.org/calendars/10061) の 7 日目の記事です。昨日は xx さんの xx でした。
 
@@ -16,37 +16,39 @@ publication_name: knowledgework
 
 Golink は一言でいうと社内限定で使える短縮 URL です。[Bitly](https://bitly.com/) のようなサービスの社内版です。社内の誰でも `go/{link_name}` という短縮 URL を作ることができ、社内の誰でもその URL を使うことができます。
 
+こちらの GitHub の README にある動画を見るとイメージしやすいです。
+
+https://github.com/nownabe/golink
+
 Go Links や GoLinks などの表記もあるようですが、元は Google の社内で使われ始めたものがシリコンバレーの企業を中心に広まったようです。[^1]
 
-Golink を使うことで、いくつもの URL を記憶して業務効率を向上できます。例えば、特定の Cloud Run サービスのログを確認するための URL として `go/myapp-log` を作ると、ログを見たいときにはブラウザに直接 URL を入力してすぐにアクセスできます。また、社内では誰でも利用可能なのですぐに URL を共有することもできます。
+Golink を使うことでいくつもの URL を簡単に記憶して業務を効率化できます。例えば、特定の Cloud Run サービスのログを確認するための URL として `go/myapp-log` を作ると、ログを見たいときにはブラウザに直接 `go/myapp-log` を入力してすぐにアクセスできます。また、社内では誰でも利用可能なので `go/myapp-log` をチームメンバーに共有できます。
 
-また、Golink はジャンプ先の URL を変更することもできるので、一つの URL で常に最新のものにアクセスできます。例えば、チームの議事録を quarterly で作り直している場合などは `go/myteam` を作っておき、議事録を作り直したタイミングでジャンプ先の URL を変更すればブックマークなどを変更することなく対応できます。
+また、Golink はジャンプ先の URL を変更できるので、1 つの URL で常に最新のものにアクセスできます。例えば、チームの議事録を quarterly で作り直している場合などは `go/myteam` を作っておき、議事録を作り直したタイミングでジャンプ先の URL を変更すればブックマークなどを変更することなく対応できます。
 
 [^1]: [The GoLinks® Blog - The History of Go Links®](https://www.golinks.com/blog/go-links-history/)
 
 # Google Cloud 版 Golink のアーキテクチャ
 
-この記事で紹介する Golink は私がプライベートで OSS として開発しました。既存のサービスや他の OSS もあったのですが、微妙に自分がほしいものが見つからず開発することにしました。
+この記事で紹介する Golink は私がプライベートで OSS として開発しました。既存のサービスや他の OSS もあったのですが、微妙に自分のほしいものが見つからず開発することにしました。
 
-https://github.com/nownabe/golink
 
 ## 要件
 
 自分がほしかった要件は次のようなものでした。
 
+* 企業でも個人でも使える
 * Google Cloud で完結する
 * アーキテクチャがシンプルである
 * お金がかからない
 * DNS の操作が不要である
 * Chrome 拡張の [Manifest V3](https://developer.chrome.com/docs/extensions/develop/migrate) に対応している
 
-下 2 つを補足します。Golink ではブラウザの URL 欄に `go/foo` と入力して、何らかの方法で正しい URL に飛ばす必要があります。方法の 1 つとして、`go` というホスト名から Golink のサーバーの IP を引けるようにするという方法があります。調べるとそれなりにこの方法が採用されている Golink の実装がありました。この方法では DNS サーバーに設定を入れたり、各社員の `/etc/hosts` を操作したりが必要になります。
+下 2 つを補足します。Golink ではブラウザの URL 欄に `go/foo` と入力して、何らかの方法で正しい URL に飛ばす必要があります。方法の 1 つとして、`go` というホスト名から Golink のサーバーの IP を引けるようにするという方法があります。この方法では DNS サーバーに設定を入れたり、各社員の `/etc/hosts` を操作したりする必要があります。
 
-他に Chrome 拡張を利用する方法があります。Golink の Chrome 拡張で `go/foo` という URL に介入し処理します。もちろん Chrome 拡張をインストールする必要があります。
+他には Chrome 拡張を利用する方法があります。Golink の Chrome 拡張で `go/foo` という URL に介入し処理します。もちろん Chrome 拡張をインストールする必要があります。
 
-企業や個人で使うことを考えたとき、全 PC に DNS 設定をいれるより、全 PC に Chrome 拡張をいれる方が楽だと判断しました。また、DNS の方法だとサーバーでリダイレクトするというアーキテクチャにするときに HTTPS が使えないし、Google Cloud の Identity-Aware Proxy も使えません。
-
-Chrome 拡張で実装された Golink もいくつかあったのですが、当時は Manifest V3 で実装されたものがありませんでした。
+企業や個人で使うことを考えたとき、全 PC に DNS 設定をいれるより、全 PC に Chrome 拡張をいれる方が楽だと判断しました。また、DNS の方法だとサーバーでリダイレクトするというアーキテクチャを採用するときに HTTPS が使えず、Google Cloud の Identity-Aware Proxy も使えません。
 
 ## アーキテクチャ
 
@@ -70,11 +72,11 @@ Chrome 拡張で実装された Golink もいくつかあったのですが、�
 
 ### Identity-Aware Proxy
 
-Golink は社内に閉じることが重要です。そのために [Identity-Aware Proxy](https://cloud.google.com/security/products/iap) を採用しています。
+Golink は社内に閉じることが重要です。そのために [Identity-Aware Proxy](https://cloud.google.com/security/products/iap) で認証しています。
 
 ### App Engine
 
-バックエンドのサーバーアプリケーションとフロントエンドをホストするために [App Engine standard environment](https://cloud.google.com/appengine/docs/standard) を利用しています。[Cloud Run](https://cloud.google.com/run) が利用できればよかったんですが、Identity-Aware Proxy と Cloud Run を組み合わせて使うためにはロードバランサーが必要となり、コンポーネントが増えてコストもかかるため App Engine を採用しました。とはいえ App Engine も素晴らしいサービスなので今のところ満足しています。
+バックエンドとフロントエンドをホストするために [App Engine standard environment](https://cloud.google.com/appengine/docs/standard) を利用しています。[Cloud Run](https://cloud.google.com/run) は Identity-Aware Proxy と組み合わせて使うためにはロードバランサーが必要となり、コンポーネントが増えてコストもかかるため App Engine を採用しました。とはいえ App Engine も素晴らしいサービスなので今のところ満足しています。
 
 1 つの App Engine サービスで管理ポータル、API サーバー、リダイレクトサーバーをホストしています。
 
@@ -120,15 +122,15 @@ main: ./cmd/backend
 
 ### Chrome 拡張
 
-Chrome 拡張は `http://go/*` という URL にアクセスしたとき、App Engine の URL にリダイレクトします。つまり、`http://go/myapp-log` にアクセスしたとき、Chrome 拡張が `https://PROJECT-ID-an.r.appspot.com/myapp-log` (App Engine の URL) にリダイレクトします。これをさらにリダイレクトサーバーが登録された URL にリダイレクトすることで、Golink の機能を実現しています。
+Chrome 拡張は `http://go/*` という URL にアクセスしたとき、App Engine の URL にリダイレクトします。つまり `http://go/myapp-log` にアクセスしたとき、Chrome 拡張が `https://PROJECT-ID-an.r.appspot.com/myapp-log` (App Engine の URL) にリダイレクトします。これをさらにリダイレクトサーバーが登録された URL にリダイレクトすることで、Golink の機能を実現しています。
 
 # ナレッジワークでの利用状況
 
 ナレッジワークでは URL にまつわる認知負荷を軽減すべく Platform Engineering の一環として Golink を導入しました。
 
-約 1 年ほど運用して、だいたい 200〜300 個の Golink があるようです (ちゃんと数えてない)。過去30日間で 500 回ほどリダイレクトしていました。まだまだ社内に広く普及しているとは言えないような数ですね。
+約 1 年ほど運用して、だいたい 200〜300 個の Golink があるようです (ちゃんと数えてない)。過去 30 日間で 500 回ほどリダイレクトしていました。まだまだ社内に広く普及しているとは言えないような数ですね。
 
-このような状況で過去1年間の合計料金は 70 円でした。平均 5 円/月です。Cloud Storage と Cloud Trace に課金されています。Cloud Storage にはコンテナイメージが保存されいるのでそれが課金されています。そういえば Container Registry がサービス終了すると App Engine はどうなるんでしょうか。2025年3月に終了予定なのでこちらは確認する必要がありそうです。
+このような状況で過去 1 年間の合計料金は 70 円でした。平均 5 円/月です。Cloud Storage と Cloud Trace に課金されています。Cloud Storage にはコンテナイメージが保存されいるのでそれが課金されています。そういえば Container Registry がサービス終了すると App Engine はどうなるんでしょうか。2025 年 3 月に終了予定なのでこちらは確認する必要がありそうです。
 
 # おわりに
 
