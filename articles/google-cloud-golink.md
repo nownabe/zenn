@@ -4,6 +4,7 @@ emoji: "🦭"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: ["gcp", "gae"]
 published: false
+publication_name: knowledgework
 ---
 
 ナレッジワークでは業務効率化を目的として Golink を導入しています。この記事では Google Cloud で構築した Golink のアーキテクチャと、導入して1年経った今の状況を紹介します。
