@@ -9,7 +9,7 @@ publication_name: knowledgework
 
 ナレッジワークでは業務効率化を目的として Golink を導入しています。この記事では Google Cloud で構築した Golink のアーキテクチャと、導入して 1 年経った今の状況を紹介します。
 
-本記事は [Google Cloud Champion Innovators Advent Calendar 2024](https://adventar.org/calendars/10061) の 7 日目の記事です。昨日は xx さんの xx でした。
+本記事は [Google Cloud Champion Innovators Advent Calendar 2024](https://adventar.org/calendars/10061) の 7 日目の記事です。6 日目はサントリーさんの [TerraformとGoogle Cloudの私的ベストプラクティスとかなんとか](https://zenn.dev/soundtricker/articles/fa27c919ad3630) でした。
 
 
 # Golink って？
@@ -130,10 +130,10 @@ Chrome 拡張は `http://go/*` という URL にアクセスしたとき、App E
 
 約 1 年ほど運用して、だいたい 200〜300 個の Golink があるようです (ちゃんと数えてない)。過去 30 日間で 500 回ほどリダイレクトしていました。まだまだ社内に広く普及しているとは言えないような数ですね。
 
-このような状況で過去 1 年間の合計料金は 70 円でした。平均 5 円/月です。Cloud Storage と Cloud Trace に課金されています。Cloud Storage にはコンテナイメージが保存されいるのでそれが課金されています。そういえば Container Registry がサービス終了すると App Engine はどうなるんでしょうか。2025 年 3 月に終了予定なのでこちらは確認する必要がありそうです。
+このような状況で過去 1 年間の合計料金は 70 円でした。平均 5 円/月です。Cloud Storage と Cloud Trace に課金されています。Cloud Storage はコンテナイメージがあるのでその保存料金ですね。そういえば Container Registry がサービス終了すると App Engine はどうなるんでしょうか。2025 年 3 月に終了予定なので確認する必要がありそうです。
 
 # おわりに
 
 本記事では Google Cloud で構築した Golink のアーキテクチャと、ナレッジワーク社内で運用した状況を紹介しました。Golink を活用するととても URL の扱いがとても楽になるので、ぜひ使ってみてください。
 
-明日の [Google Cloud Champion Innovators Advent Calendar 2024]() は xx さんです。お楽しみに！
+[Google Cloud Champion Innovators Advent Calendar 2024]() の 8 日目は[ふっく](https://zenn.dev/zuck)さんです。お楽しみに！
