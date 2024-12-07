@@ -3,7 +3,7 @@ title: "Google Cloud で作るお手軽 Golink"
 emoji: "🦭"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: ["gcp", "gae"]
-published: false
+published: true
 publication_name: knowledgework
 ---
 
