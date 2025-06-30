@@ -11,7 +11,7 @@ Cloud Run worker pools が来ましたね！まだ preview ですが Cloud Run �
 本記事では Cloud Run worker pools で GitHub Actions の self-hosted runner として構築する手順を紹介します。
 
 :::message alert
-この記事は GitHub App の権限設定が雑なので実際に利用する場合は注意してください。
+本記事の手順では GitHub App の権限設定が雑なので実際に利用する場合は注意してください。
 :::
 
 ## Cloud Run worker pools とは
