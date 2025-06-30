@@ -4,7 +4,7 @@ emoji: "🦈"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: [googlecloud, cloudrun, github, githubactions]
 publication_name: knowledgework
-published: false
+published: true
 ---
 
 Cloud Run worker pools が来ましたね！まだ preview ですが Cloud Run ファンとしてはとても期待している機能です。
