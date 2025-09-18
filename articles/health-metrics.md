@@ -3,7 +3,7 @@ title: "健全なチームを保つ OKR と Health Metrics"
 emoji: "💖"
 type: "idea" # tech: 技術記事 / idea: アイデア
 topics: [team, okr]
-published: false
+published: true
 publication_name: knowledgework
 ---
 
@@ -17,7 +17,7 @@ publication_name: knowledgework
 
 ナレッジワークはスタートアップとして急成長を実現するために全チームが常にストレッチゴールを設定しています。実際にこれまで急成長といえる成長を遂げてきたと実感しており、その急成長を支えるツールとして OKR は重要な役割を果たしています。目標設定における全社員の共通認識を作り、シンプルなフレームワークでマネジメントコストを最小限に保つことができています。
 
-ナレッジワークでは達成すべき重要な目標として OKR を設定する一方で、組織の背骨とも言えるフィロソフィーを最も大切にしています。ナレッジワークのフィロソフィーは[ミッション](https://knowledgework.com/philosophy/mission)や行動指針[^1]等で構成されています。OKR は上手く使えばフィロソフィーを体現しつつ急成長に貢献し続けることができます。しかし、OKR を最優先に活動してしまうとフィロソフィーを犠牲にしてしまうこともあります。
+ナレッジワークでは達成すべき重要な目標として OKR を設定する一方で、組織の背骨とも言えるフィロソフィーを最も大切にしています。ナレッジワークのフィロソフィーは[ミッション](https://knowledgework.com/philosophy/mission)や[行動指針](https://knowledgework.com/philosophy/style-policy)[^1]で構成されています。OKR は上手く使えばフィロソフィーを体現しつつ急成長に貢献し続けることができます。しかし、OKR を最優先に活動してしまうとフィロソフィーを犠牲にしてしまうこともあります。
 
 [^1]: ナレッジワークでは[スタイルやポリシー](https://knowledgework.com/philosophy/style-policy)という名前で定義されています。
 
