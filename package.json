@@ -1,6 +1,7 @@
 {
   "private": true,
   "name": "zenn",
+  "packageManager": "bun@1.3.3",
   "scripts": {
     "start": "zenn preview",
     "test": "echo \"Error: no test specified\" && exit 1"
