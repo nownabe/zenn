@@ -19,6 +19,6 @@
     "textlint": "13.4.1",
     "textlint-rule-preset-ja-spacing": "2.4.3",
     "textlint-rule-preset-ja-technical-writing": "7.0.0",
-    "zenn-cli": "^0.1.150"
+    "zenn-cli": "^0.2.0"
   }
 }
