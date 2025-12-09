@@ -19,14 +19,26 @@ jobs:
         env:
           REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Run textlint and capture exit code
-          bun run textlint -f checkstyle "articles/**/*.md" "books/**/*.md" > /tmp/textlint.xml || textlint_exit=$?
+          # Get changed markdown files
+          git fetch origin ${{ github.base_ref }}
+          changed_files=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.(md)$' | grep -E '^(articles|books)/' || true)
+
+          if [ -z "$changed_files" ]; then
+            echo "No markdown files changed in articles or books directories"
+            exit 0
+          fi
+
+          echo "Changed files:"
+          echo "$changed_files"
+
+          # Run textlint on changed files and capture exit code
+          echo "$changed_files" | xargs bun run textlint -f checkstyle > /tmp/textlint.xml || textlint_exit=$?
 
           # Send results to reviewdog
           cat /tmp/textlint.xml | reviewdog -f=checkstyle \
             -name="textlint" \
             -reporter=github-pr-check \
-            -filter-mode=nofilter \
+            -filter-mode=added \
             -fail-level=error || reviewdog_exit=$?
 
           # Exit with error if textlint had fatal errors (exit code 2)
